@@ -1,0 +1,7 @@
+credentials.json
+*.secrets.json
+.env
+.env.*
+config.local.*
+skills/*/references/local-overrides.md
+skills/*/local/
