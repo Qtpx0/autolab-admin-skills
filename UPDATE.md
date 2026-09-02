@@ -3,6 +3,19 @@
 This package is the official upstream for the paired `adspower-browser` and
 `webshare-proxy` skills. Always update both together.
 
+## Official maintainer publish
+
+From `G:\Dev\Extension-Premiere-Pro`, preview or synchronize the managed public bundle:
+
+```powershell
+npm run publish:admin-skills:plan
+npm run publish:admin-skills
+```
+
+The publisher targets `G:\Dev\AutoLab-Admin-Skills-Repo`, requires it to be a
+Git checkout, copies only allowlisted Official files, preserves unrelated files,
+blocks known credentials, and never commits or pushes.
+
 ## Existing installation
 
 1. Locate the project containing `.agents/skills`. Do not update a guessed path.
