@@ -63,7 +63,7 @@ Raw calls to AdsPower Local API `POST /api/v1/user/create` without an explicit `
 All newly provisioned AutoLab browser profiles MUST enforce the Golden Fingerprint standard:
 - **OS Platform:** `random_ua.ua_system_version: ["Windows 10", "Windows 11"]` (100% Windows PC Desktop)
 - **AudioContext:** `audio: "1"` (AudioContext noise switch ON)
-- **WebRTC:** `webrtc: "replace"` (Replace with proxy IP, zero IP leaks)
+- **WebRTC:** `webrtc: "proxy"` (Replace with proxy IP — displays as "แทนที่" in Thai UI, zero IP leaks)
 - **Timezone, Geo & Language:** `automatic_timezone: "1"`, `location_switch: "1"`, `language_switch: "1"`, `page_language_switch: "1"` (100% based on IP)
 - **Hardware Isolation:** `canvas: "1"`, `webgl_image: "1"`, `media_devices: "1"`, `client_rects: "1"`, `speech_switch: "1"`
 - **Rate Limiting:** Enforce at least 1,300ms pause between consecutive profile creations (`await sleep(1300)`).

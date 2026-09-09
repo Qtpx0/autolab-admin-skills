@@ -28,7 +28,7 @@ created with the AutoLab Golden Fingerprint standard:
 1. **OS Platform Lock:** `random_ua.ua_system_version: ["Windows 10", "Windows 11"]`
    (Guarantees 100% Windows PC Desktop; eliminates mobile/macOS profiles).
 2. **AudioContext Noise:** `audio: "1"` (Explicitly activates AudioContext noise switch).
-3. **WebRTC Replace:** `webrtc: "replace"` (Replaces WebRTC with proxy IP to prevent IP leaks).
+3. **WebRTC Replace:** `webrtc: "proxy"` (Replaces WebRTC with proxy IP — displays as "แทนที่" in Thai UI — to prevent IP leaks).
 4. **Timezone, Geo & Language Based on IP:** `automatic_timezone: "1"`,
    `location_switch: "1"`, `language_switch: "1"`, `page_language_switch: "1"`.
 5. **Hardware Noise Isolation:** `canvas: "1"`, `webgl_image: "1"`, `media_devices: "1"`,

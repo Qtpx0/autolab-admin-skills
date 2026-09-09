@@ -138,7 +138,7 @@ const AUTOLAB_GOLDEN_FINGERPRINT = {
     canvas: '1',
     webgl_image: '1',
     audio: '1',
-    webrtc: 'replace',
+    webrtc: 'proxy',
     media_devices: '1',
     client_rects: '1',
     speech_switch: '1',
