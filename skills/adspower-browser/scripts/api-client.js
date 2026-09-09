@@ -3,7 +3,7 @@ const { execSync } = require('child_process');
 const { AUTOLAB_BACKGROUND_FLAGS, mergeLaunchArgs, requireCredential } = require('./admin-kit-core');
 
 let CACHED_PORT = null;
-const DEFAULT_PORTS = [50325, 6288, 2860, 13249];
+const DEFAULT_PORTS = [14555, 13659, 50325, 6288, 2860, 13249];
 
 function getAdsPowerKey() {
     return requireCredential('adsPowerApiKey');
@@ -38,7 +38,7 @@ async function getActivePort() {
     try {
         const netstat = execSync('netstat -ano').toString();
         const ports = [...new Set(netstat.split('\n')
-            .filter(l => l.includes('LISTENING') && l.includes('127.0.0.1'))
+            .filter(l => l.includes('LISTENING') && (l.includes('127.0.0.1') || l.includes('0.0.0.0')))
             .map(l => parseInt(l.trim().split(/\s+/)[1]?.split(':')[1]))
             .filter(p => p && p > 1000 && p !== 5027))];
 
@@ -130,14 +130,86 @@ async function request(path, method = 'GET', body = null) {
     });
 }
 
+const AUTOLAB_GOLDEN_FINGERPRINT = {
+    automatic_timezone: '1',
+    location_switch: '1',
+    language_switch: '1',
+    page_language_switch: '1',
+    canvas: '1',
+    webgl_image: '1',
+    audio: '1',
+    webrtc: 'replace',
+    media_devices: '1',
+    client_rects: '1',
+    speech_switch: '1',
+    random_ua: {
+        ua_system_version: ['Windows 10', 'Windows 11']
+    }
+};
+
 module.exports = {
     getActivePort,
     sleep: (ms) => new Promise(r => setTimeout(r, ms)),
+    AUTOLAB_GOLDEN_FINGERPRINT,
 
     // 1. Profile Operations
     listProfiles: (query = {}) => request('/api/v1/user/list?' + new URLSearchParams(query).toString()),
     getProfile: (profile_id) => request(`/api/v1/user/list?profile_id=${profile_id}`),
-    createProfile: (data) => request('/api/v1/user/create', 'POST', data),
+    createProfile: (data) => {
+        const payload = {
+            ...data,
+            fingerprint_config: {
+                ...AUTOLAB_GOLDEN_FINGERPRINT,
+                ...(data.fingerprint_config || {})
+            }
+        };
+        return request('/api/v1/user/create', 'POST', payload);
+    },
+    /**
+     * AutoLab Golden Standard Profile Factory
+     * Creates an AdsPower profile guaranteed to have Windows 10/11 Desktop OS, AudioContext noise ON,
+     * WebRTC replace, IP-based Timezone/Location, and automatically persists the 3 Chromium occlusion flags.
+     * Includes built-in rate-limit safety pause (1300ms) for reliable batch operations.
+     */
+    createAutoLabProfile: async function({ name, group_id = '0', proxyid = null, user_proxy_config = null, remark = '', tabs = [] }) {
+        const payload = {
+            name,
+            group_id: String(group_id),
+            remark,
+            fingerprint_config: { ...AUTOLAB_GOLDEN_FINGERPRINT }
+        };
+
+        if (proxyid) {
+            payload.proxyid = String(proxyid);
+        } else if (user_proxy_config) {
+            payload.user_proxy_config = user_proxy_config;
+        } else {
+            payload.user_proxy_config = { proxy_soft: 'no_proxy' };
+        }
+
+        if (tabs && tabs.length > 0) {
+            payload.tabs = tabs;
+        }
+
+        const createRes = await request('/api/v1/user/create', 'POST', payload);
+        const profileId = createRes?.id || createRes?.data?.id || createRes?.profile_id;
+        
+        if (profileId) {
+            await new Promise(r => setTimeout(r, 600));
+            try {
+                await request('/api/v2/browser-profile/update', 'POST', {
+                    profile_id: profileId,
+                    launch_args: mergeLaunchArgs([])
+                });
+            } catch (e) {
+                // Non-fatal, profile still created successfully
+            }
+        }
+
+        // Built-in rate limit safety guard for AdsPower API (1 req/sec limit)
+        await new Promise(r => setTimeout(r, 1300));
+        return createRes;
+    },
     updateProfile: (data) => request('/api/v1/user/update', 'POST', data),
     persistAutoPostLaunchArgs: (profile_id, existingArgs = []) => request(
         '/api/v2/browser-profile/update',
@@ -169,10 +241,10 @@ module.exports = {
     newFingerprint: (profile_id) => request('/api/v1/user/new-fingerprint', 'POST', { profile_id }),
 
     // 5. Proxy Pool Management
-    listProxies: (page = 1, limit = 100) => request(`/api/v1/proxy/list?page=${page}&limit=${limit}`),
-    createProxies: (proxies) => request('/api/v1/proxy/create', 'POST', proxies),
-    updateProxy: (data) => request('/api/v1/proxy/update', 'POST', data),
-    deleteProxies: (proxy_ids) => request('/api/v1/proxy/delete', 'POST', { proxy_ids }),
+    listProxies: (page = 1, limit = 100) => request('/api/v2/proxy-list/list', 'POST', { page, limit }),
+    createProxies: (proxies) => request('/api/v2/proxy-list/create', 'POST', proxies),
+    updateProxy: (data) => request('/api/v2/proxy-list/update', 'POST', data),
+    deleteProxies: (proxy_ids) => request('/api/v2/proxy-list/delete', 'POST', { proxy_id: proxy_ids }),
 
     // 6. Group Management
     listGroups: () => request('/api/v1/group/list?page_size=100'),

@@ -42,6 +42,17 @@
   - **fakey** (optional): 2FA key for online 2FA code generators.
 - **fingerprint_config** (optional): Browser fingerprint config; see [fingerprint-config.md](fingerprint-config.md).
 
+### Mandatory AutoLab Golden Fingerprint Standard (Verified 2026-09-09)
+
+When creating a browser profile for AutoLab automation, `fingerprint_config` MUST include:
+- `random_ua: { ua_system_version: ["Windows 10", "Windows 11"] }` (Locks OS to Windows PC; avoids accidental mobile/macOS allocation)
+- `audio: "1"` (Ensures AudioContext noise switch is ON; raw API defaults to "0")
+- `webrtc: "replace"` (Shields WebRTC with proxy IP)
+- `automatic_timezone: "1"`, `location_switch: "1"`, `language_switch: "1"`, `page_language_switch: "1"`
+- `canvas: "1"`, `webgl_image: "1"`, `media_devices: "1"`, `client_rects: "1"`, `speech_switch: "1"`
+
+Or call `api.createAutoLabProfile({ name, group_id, proxyid })` from `scripts/api-client.js`.
+
 ### Required AutoLab post-create step
 
 `create-browser` does not accept `launch_args` in the current contract. Once it

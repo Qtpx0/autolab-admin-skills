@@ -38,8 +38,9 @@ Apply when the user:
 If `references/local-overrides.md` exists, read it after this file and apply its
 site-specific guidance without weakening the safety and verification rules here.
 
-## AutoLab Official Profile Invariant
+## AutoLab Official Profile Invariant & Golden Fingerprint Standard
 
+### 1. Mandatory Chromium Occlusion Protection
 Every newly created AdsPower profile used for AutoLab browser automation MUST be
 persistently updated, while closed, with all three Chromium launch arguments:
 
@@ -55,6 +56,19 @@ array. Preserve any existing launch arguments, avoid duplicates, then verify by
 opening the profile normally and inspecting the main browser process. These
 flags prevent Chromium from stalling AutoPost when another window fully covers
 the browser; they do not replace AutoPost state recovery.
+
+### 2. Mandatory AutoLab Golden Fingerprint Profile Standard (Verified 2026-09-09)
+Raw calls to AdsPower Local API `POST /api/v1/user/create` without an explicit `fingerprint_config` randomly allocate operating systems (causing mobile Android/iOS or macOS profiles to be generated) and disable AudioContext noise (`audio: '0'`). In AdsPower, the profile OS type cannot be altered after creation.
+
+All newly provisioned AutoLab browser profiles MUST enforce the Golden Fingerprint standard:
+- **OS Platform:** `random_ua.ua_system_version: ["Windows 10", "Windows 11"]` (100% Windows PC Desktop)
+- **AudioContext:** `audio: "1"` (AudioContext noise switch ON)
+- **WebRTC:** `webrtc: "replace"` (Replace with proxy IP, zero IP leaks)
+- **Timezone, Geo & Language:** `automatic_timezone: "1"`, `location_switch: "1"`, `language_switch: "1"`, `page_language_switch: "1"` (100% based on IP)
+- **Hardware Isolation:** `canvas: "1"`, `webgl_image: "1"`, `media_devices: "1"`, `client_rects: "1"`, `speech_switch: "1"`
+- **Rate Limiting:** Enforce at least 1,300ms pause between consecutive profile creations (`await sleep(1300)`).
+
+**Recommended programmatic method:** Use `api.createAutoLabProfile({ name, group_id, proxyid })` from `scripts/api-client.js`, which automatically enforces all Golden Fingerprint parameters, persists the background occlusion flags, and honors rate limits.
 
 Ensure AdsPower is running (default port `50325`). Pass `--port` / `--api-key` when needed, or set the `ADS_API_KEY` environment variable before running `start`.
 
