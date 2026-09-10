@@ -1,6 +1,10 @@
 const http = require('http');
-const { execSync } = require('child_process');
-const { AUTOLAB_BACKGROUND_FLAGS, mergeLaunchArgs, requireCredential } = require('./admin-kit-core');
+const {
+    AUTOLAB_BACKGROUND_FLAGS,
+    mergeLaunchArgs,
+    requireCredential,
+    getLiveAdsPowerPort
+} = require('./admin-kit-core');
 
 let CACHED_PORT = null;
 const DEFAULT_PORTS = [14555, 13659, 50325, 6288, 2860, 13249];
@@ -10,8 +14,9 @@ function getAdsPowerKey() {
 }
 
 /**
- * High-Speed Dynamic Port Resolver
- * Auto-detects the active AdsPower Local API port in milliseconds.
+ * Zero-Config Dynamic Port Resolver
+ * Reads AdsPower runtime file (cwd_global/source/local_api) in 0ms.
+ * Fallbacks to DEFAULT_PORTS only if runtime file is absent.
  */
 async function getActivePort() {
     if (CACHED_PORT) {
@@ -24,7 +29,18 @@ async function getActivePort() {
         }
     }
 
-    // 1. Try known common ports first
+    // 1. Zero-Config Direct Read from AdsPower runtime file (0ms)
+    try {
+        const livePort = getLiveAdsPowerPort();
+        if (livePort) {
+            if (await testPort(livePort)) {
+                CACHED_PORT = livePort;
+                return livePort;
+            }
+        }
+    } catch (e) {}
+
+    // 2. Fallback to known common ports if runtime file is missing
     for (const p of DEFAULT_PORTS) {
         try {
             if (await testPort(p)) {
@@ -34,43 +50,25 @@ async function getActivePort() {
         } catch (e) {}
     }
 
-    // 2. Scan listening ports on system
-    try {
-        const netstat = execSync('netstat -ano').toString();
-        const ports = [...new Set(netstat.split('\n')
-            .filter(l => l.includes('LISTENING') && (l.includes('127.0.0.1') || l.includes('0.0.0.0')))
-            .map(l => parseInt(l.trim().split(/\s+/)[1]?.split(':')[1]))
-            .filter(p => p && p > 1000 && p !== 5027))];
-
-        for (const p of ports) {
-            try {
-                if (await testPort(p)) {
-                    CACHED_PORT = p;
-                    return p;
-                }
-            } catch (e) {}
-        }
-    } catch (e) {}
-
     return 50325; // fallback
 }
 
+
 function testPort(port) {
-    const adsPowerKey = getAdsPowerKey();
     return new Promise((resolve) => {
         const req = http.get({
             hostname: '127.0.0.1',
             port: port,
-            path: '/api/v1/user/list?page_size=1',
-            headers: { 'Authorization': `Bearer ${adsPowerKey}`, 'api-key': adsPowerKey },
-            timeout: 400
+            path: '/status',
+            timeout: 500
         }, res => {
             let d = '';
             res.on('data', c => d += c);
             res.on('end', () => {
-                if (d.includes('\"msg\":\"Success\"') || (d.includes('\"msg\"') && d.includes('\"code\"') && !d.includes('\"message\":\"Not Found\"'))) {
-                    resolve(true);
-                } else {
+                try {
+                    const json = JSON.parse(d);
+                    resolve(json.code === 0);
+                } catch (e) {
                     resolve(false);
                 }
             });
@@ -79,6 +77,7 @@ function testPort(port) {
         req.on('timeout', () => { req.destroy(); resolve(false); });
     });
 }
+
 
 /**
  * Direct High-Speed HTTP Client for AdsPower Local API

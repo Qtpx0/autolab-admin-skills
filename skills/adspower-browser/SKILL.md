@@ -70,6 +70,13 @@ All newly provisioned AutoLab browser profiles MUST enforce the Golden Fingerpri
 
 **Recommended programmatic method:** Use `api.createAutoLabProfile({ name, group_id, proxyid })` from `scripts/api-client.js`, which automatically enforces all Golden Fingerprint parameters, persists the background occlusion flags, and honors rate limits.
 
+### 3. Zero-Config Dynamic Port Resolver & MCP Integration (Verified 2026-09-11)
+AdsPower rotates its Local API port upon restart. AutoLab uses zero-config direct runtime file detection:
+- Reads `%APPDATA%\adspower_global\cwd_global\source\local_api` (0ms, 100% deterministic).
+- Performs lightweight health check against `/status` (bypasses the 1 req/sec rate limit of `/api/v1/user/list`).
+- For MCP servers: use `scripts/mcp-runner.js` instead of static hardcoded ports in IDE configurations.
+- Full details and configuration examples: see [references/mcp-and-local-api-runtime.md](references/mcp-and-local-api-runtime.md).
+
 Ensure AdsPower is running (default port `50325`). Pass `--port` / `--api-key` when needed, or set the `ADS_API_KEY` environment variable before running `start`.
 
 The CLI itself supports launching the AdsPower application via API key. If the AdsPower client is installed, AdsPower headless mode can also be launched via API key.

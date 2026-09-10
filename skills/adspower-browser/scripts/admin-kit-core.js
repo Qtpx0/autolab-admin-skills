@@ -72,9 +72,39 @@ function classifyManagedFile({ currentHash, previousHash, incomingHash }) {
     return 'conflict';
 }
 
+function defaultAdsPowerRuntimePath(env = process.env) {
+    const appData = env.APPDATA || (process.platform === 'darwin'
+        ? path.join(os.homedir(), 'Library', 'Application Support')
+        : path.join(os.homedir(), 'AppData', 'Roaming'));
+    return path.join(appData, 'adspower_global', 'cwd_global', 'source', 'local_api');
+}
+
+function getLiveAdsPowerUrl(options = {}) {
+    const filePath = options.runtimePath || defaultAdsPowerRuntimePath(options.env || process.env);
+    if (fs.existsSync(filePath)) {
+        try {
+            const content = fs.readFileSync(filePath, 'utf8').trim();
+            if (content.startsWith('http')) return content;
+        } catch (e) {}
+    }
+    return null;
+}
+
+function getLiveAdsPowerPort(options = {}) {
+    const url = getLiveAdsPowerUrl(options);
+    if (url) {
+        const match = url.match(/:(\d+)/);
+        if (match) return parseInt(match[1], 10);
+    }
+    return null;
+}
+
 module.exports = {
     AUTOLAB_BACKGROUND_FLAGS,
     defaultCredentialsPath,
+    defaultAdsPowerRuntimePath,
+    getLiveAdsPowerUrl,
+    getLiveAdsPowerPort,
     loadCredentials,
     requireCredential,
     extractLegacyCredentials,
@@ -83,3 +113,4 @@ module.exports = {
     hashContent,
     classifyManagedFile
 };
+

@@ -9,8 +9,11 @@ const {
     loadCredentials,
     mergeLaunchArgs,
     saveCredentials,
-    classifyManagedFile
+    classifyManagedFile,
+    getLiveAdsPowerUrl,
+    getLiveAdsPowerPort
 } = require('./admin-kit-core');
+
 
 const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'autolab-admin-kit-'));
 const credentialsPath = path.join(tempRoot, 'credentials.json');
@@ -64,5 +67,16 @@ assert.strictEqual(classifyManagedFile({ currentHash: 'old', previousHash: 'old'
 assert.strictEqual(classifyManagedFile({ currentHash: 'custom', previousHash: 'old', incomingHash: 'new' }), 'conflict');
 assert.strictEqual(classifyManagedFile({ currentHash: 'new', previousHash: 'old', incomingHash: 'new' }), 'current');
 
+const mockRuntimeDir = path.join(tempRoot, 'adspower_global', 'cwd_global', 'source');
+fs.mkdirSync(mockRuntimeDir, { recursive: true });
+const mockRuntimeFile = path.join(mockRuntimeDir, 'local_api');
+fs.writeFileSync(mockRuntimeFile, 'http://local.adspower.com:12345/\n');
+
+assert.strictEqual(getLiveAdsPowerUrl({ runtimePath: mockRuntimeFile }), 'http://local.adspower.com:12345/');
+assert.strictEqual(getLiveAdsPowerPort({ runtimePath: mockRuntimeFile }), 12345);
+assert.strictEqual(getLiveAdsPowerUrl({ runtimePath: path.join(tempRoot, 'non_existent') }), null);
+assert.strictEqual(getLiveAdsPowerPort({ runtimePath: path.join(tempRoot, 'non_existent') }), null);
+
 fs.rmSync(tempRoot, { recursive: true, force: true });
 console.log('PASS admin skill kit contract');
+
