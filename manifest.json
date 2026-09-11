@@ -1,6 +1,6 @@
 {
   "package": "autolab-admin-skills",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "skills": ["adspower-browser", "webshare-proxy"],
   "preserve": [
     "references/local-overrides.md",
@@ -12,6 +12,7 @@
   "kiPatches": [
     "2026-09-03-chromium-occlusion-launch-args.md",
     "2026-09-09-adspower-golden-fingerprint-creation-standard.md",
-    "2026-09-11-adspower-zero-config-dynamic-port-resolver.md"
+    "2026-09-11-adspower-zero-config-dynamic-port-resolver.md",
+    "2026-09-11-webshare-3layer-meta-firewall-and-dnsbl-health-audit.md"
   ]
 }

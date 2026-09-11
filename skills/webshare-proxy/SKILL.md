@@ -69,13 +69,17 @@ verification rules.
 
 ## 3. Automation Scripts & Workflows
 
-### 3.1 Pre-Flight Health Inspection (Scamalytics + Fraud Score Check)
-Before importing any Webshare proxy into AdsPower or attaching to Facebook accounts:
-1. Fetch all proxies via `GET /api/v2/proxy/list/`
-2. For each IP, query Fraud Score & Blacklist status:
-   * **Score 0–15:** Passed (Clean residential IP)
-   * **Score > 35:** Flagged ➔ Auto-trigger `POST /api/v2/proxy/replacement/`
-3. Export verified clean list.
+### 3.1 3-Layer Health Inspection (Meta Firewall, Multi-DNSBL & AdsPower Pool Audit)
+Before importing or auditing Webshare proxies attached to Facebook accounts:
+Run the official high-speed health audit script:
+```bash
+node .agents/skills/webshare-proxy/scripts/audit-proxy-pool.js
+```
+The audit executes a rigorous 3-layer inspection across all 50-100 proxies concurrently:
+1. **Network Layer (Meta Edge TLS Handshake):** Establishes an HTTP `CONNECT` tunnel to `www.facebook.com:443` via the proxy and verifies a healthy response (`HTTP 200/302`) in <500ms (confirms IP is not blocked by Meta's network firewalls).
+2. **Global DNSBL Blacklist Check:** Resolves reversed IP addresses against `zen.spamhaus.org` (Spamhaus ZEN), `bl.spamcop.net` (SpamCop), and `b.barracudacentral.org` (Barracuda).
+3. **AdsPower Pool Correlation:** Cross-references the proxy with AdsPower Proxy Pool tags (e.g. `Project Kik`, `Project Ton`) and checks profile allocation counts.
+If any IP fails or exceeds score limits, trigger automated replacement via `swap-proxy-country.js` or the Webshare v3 replace API.
 
 ### 3.2 Bridge from Webshare API to AdsPower Local API
 1. Fetch clean proxies from Webshare API.
@@ -90,7 +94,7 @@ Before importing any Webshare proxy into AdsPower or attaching to Facebook accou
      "proxy_password": "..."
    }
    ```
-3. Call AdsPower Local API `create-proxy` or `create-browser` / `update-browser` on Port `6288` (or active port).
+3. Call AdsPower Local API `create-proxy` or `create-browser` / `update-browser` on Port `50325` (or active port).
 4. Whenever this workflow creates an AdsPower profile, follow the sibling
    `adspower-browser` AutoLab Official Profile Invariant and persist all three
    Chromium anti-background launch arguments before the profile is opened.
@@ -102,4 +106,3 @@ node .agents/skills/webshare-proxy/scripts/swap-proxy-country.js <profile_no | p
 ```
 * **Example:** `node .agents/skills/webshare-proxy/scripts/swap-proxy-country.js "หนัง 001" US`
 * Triggers Webshare v3 replace API, polls status, updates AdsPower profile & proxy pool, and verifies connection with `curl.exe` in under 4 seconds!
-

@@ -295,6 +295,14 @@ Use these pre-built native Node.js scripts for sub-second, direct HTTP operation
 
 * **Direct API Client (0.1s):** `node .agents/skills/adspower-browser/scripts/api-client.js`
   * Features auto-port resolution, dual-header authentication, rate-limiting helpers, and `bindProxyPool(userId, proxyId)`.
+* **Fleet Provisioning (AutoLab Golden Standard):**
+  ```bash
+  node .agents/skills/adspower-browser/scripts/provision-project.js <ProjectName> [count=15] [remark]
+  ```
+  * Creates or resolves Group in AdsPower (e.g. `Project Kik`).
+  * Auto-allocates dedicated tagged proxies (or free pool proxies) with balanced round-robin binding.
+  * Provisions 15 profiles with AutoLab Golden Fingerprint standard (Windows Desktop 100%, AudioContext ON, WebRTC Replace).
+  * Automatically injects the 3 Chromium background occlusion flags and strictly honors API rate limits.
 * **Clean-Slate Profile Reset (Section 15 SOP):**
   ```bash
   node .agents/skills/adspower-browser/scripts/clean-slate-profile.js <profile_no | profile_id | name>
@@ -302,4 +310,3 @@ Use these pre-built native Node.js scripts for sub-second, direct HTTP operation
   * Performs deep cache wipe (Local storage, IndexedDB, Cookie, History, Cache).
   * **Exempts Extension Data 100%** to preserve AutoLab Extension token.
   * Calls `new-fingerprint` to randomize Canvas, WebGL, AudioContext in 1 click.
-
