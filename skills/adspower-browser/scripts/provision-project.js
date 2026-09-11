@@ -1,7 +1,9 @@
 const path = require('path');
 const api = require('./api-client');
+const { verifyUpstreamSync } = require('./admin-kit-core');
 
 async function provisionProject(projectName, count = 15, customRemark = '') {
+    await verifyUpstreamSync();
     if (!projectName) {
         console.error('Usage: node provision-project.js <ProjectName> [count=15] [remark]');
         process.exit(1);

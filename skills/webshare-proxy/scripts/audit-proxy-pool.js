@@ -3,7 +3,7 @@ const https = require('https');
 const dns = require('dns').promises;
 const path = require('path');
 const adsClient = require('../../adspower-browser/scripts/api-client');
-const { requireCredential } = require('../../adspower-browser/scripts/admin-kit-core');
+const { requireCredential, verifyUpstreamSync } = require('../../adspower-browser/scripts/admin-kit-core');
 
 function getWebshareToken() {
     return requireCredential('webshareApiToken');
@@ -137,6 +137,7 @@ async function checkBlacklists(ip) {
 }
 
 async function runAudit() {
+    await verifyUpstreamSync();
     console.log('[ProxyAudit] Fetching Webshare Proxies & AdsPower Proxy Pool...');
     const [webshareList, adsProxiesRes] = await Promise.all([
         fetchWebshareProxies(),
