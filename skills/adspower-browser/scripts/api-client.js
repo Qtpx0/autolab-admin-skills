@@ -142,7 +142,8 @@ const AUTOLAB_GOLDEN_FINGERPRINT = {
     client_rects: '1',
     speech_switch: '1',
     random_ua: {
-        ua_system_version: ['Windows 10', 'Windows 11']
+        ua_system_version: ['Windows 10', 'Windows 11'],
+        ua_version: ['152']
     }
 };
 

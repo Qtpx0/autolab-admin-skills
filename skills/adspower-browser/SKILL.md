@@ -80,6 +80,20 @@ AdsPower rotates its Local API port upon restart. AutoLab uses zero-config direc
 - For MCP servers: use `scripts/mcp-runner.js` instead of static hardcoded ports in IDE configurations.
 - Full details and configuration examples: see [references/mcp-and-local-api-runtime.md](references/mcp-and-local-api-runtime.md).
 
+### 4. Mandatory Kernel & User-Agent Integrity Standard (Verified 2026-09-21)
+Modern anti-fraud systems and detection engines (e.g. BrowserScan, Meta Risk Engine) do not rely solely on the HTTP `User-Agent` header; they inspect deep hardware rendering capabilities via **WebGPU / WebGL APIs**.
+
+* **Root Cause of Fingerprint Drift:** When AdsPower upgrades the local browser engine (e.g. to SunBrowser Kernel 152), older profiles keep their static User-Agent (e.g. Chrome 128–133) because anti-detect browsers intentionally freeze UAs to protect active Facebook sessions from overnight shift alerts. If the kernel and UA drift > 3 major versions apart, BrowserScan flags *"Your browser version and User Agent do not match"*.
+* **Safety Invariant:** Updating the profile's User-Agent string to match the current Kernel does NOT clear SQLite cookies, passwords, or session tokens. Facebook login remains 100% intact.
+* **AutoLab Universal Sync Tool:** Use `scripts/sync-user-agents.js` (or `npm run sync:user-agents`) to audit and align profiles without launching any GUI windows:
+  - **Audit Fleet:** `node scripts/sync-user-agents.js --audit`
+  - **Single Profile:** `node scripts/sync-user-agents.js --serial 3` (or `--id <profileId>`)
+  - **Specific Team Group:** `node scripts/sync-user-agents.js --group "Project Q"`
+  - **Fleet-wide Background Sync:** `node scripts/sync-user-agents.js --all`
+  - **Target Version Override:** `--kernel 152` (auto-detects installed kernel by default)
+  - **Dry-run Preview:** `--dry-run`
+* **Randomized Minor Builds:** The tool automatically rotates realistic minor build strings within the target major release (e.g. `152.0.7977.54`, `.48`, `.60`, `.65`) so each profile receives a distinct, authentic signature.
+
 Ensure AdsPower is running (default port `50325`). Pass `--port` / `--api-key` when needed, or set the `ADS_API_KEY` environment variable before running `start`.
 
 The CLI itself supports launching the AdsPower application via API key. If the AdsPower client is installed, AdsPower headless mode can also be launched via API key.

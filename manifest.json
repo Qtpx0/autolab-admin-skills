@@ -1,6 +1,6 @@
 {
   "package": "autolab-admin-skills",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "skills": ["adspower-browser", "webshare-proxy"],
   "preserve": [
     "references/local-overrides.md",
@@ -14,6 +14,7 @@
     "2026-09-09-adspower-golden-fingerprint-creation-standard.md",
     "2026-09-11-adspower-zero-config-dynamic-port-resolver.md",
     "2026-09-11-webshare-3layer-meta-firewall-and-dnsbl-health-audit.md",
-    "2026-09-21-adspower-20team-100proxy-scale-and-ratelimit-fix.md"
+    "2026-09-21-adspower-20team-100proxy-scale-and-ratelimit-fix.md",
+    "2026-09-21-adspower-kernel-ua-integrity-and-central-sync-tool.md"
   ]
 }
