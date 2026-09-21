@@ -298,7 +298,19 @@ Use these pre-built native Node.js scripts for sub-second, direct HTTP operation
 
 * **Direct API Client (0.1s):** `node .agents/skills/adspower-browser/scripts/api-client.js`
   * Features auto-port resolution, dual-header authentication, rate-limiting helpers, and `bindProxyPool(userId, proxyId)`.
-* **Fleet Provisioning (AutoLab Golden Standard):**
+* **Autonomous Fleet Provisioning (11 Teams Batch Engine):**
+  ```bash
+  node .agents/skills/adspower-browser/scripts/provision-fleet-11.js
+  ```
+  * Provisions 11 new teams $\times$ 15 profiles = 165 profiles under Golden Fingerprint Standard in 1 click.
+  * Injects Chromium background occlusion flags and auto-binds Proxy IDs 51–100 with Round-Robin interleaving.
+* **Autonomous Proxy Re-Balancing Engine (20 Teams Equal Distribution):**
+  ```bash
+  node .agents/skills/adspower-browser/scripts/rebalance-proxies-to-5.js
+  ```
+  * Re-distributes proxies across all 20 teams so that EVERY employee has exactly 5 dedicated proxies.
+  * Honors the strict 1 req/sec rate limit with mandatory `await sleep(1400)` delays to prevent dropped re-bindings.
+* **Single Project Fleet Provisioning:**
   ```bash
   node .agents/skills/adspower-browser/scripts/provision-project.js <ProjectName> [count=15] [remark]
   ```
@@ -313,3 +325,4 @@ Use these pre-built native Node.js scripts for sub-second, direct HTTP operation
   * Performs deep cache wipe (Local storage, IndexedDB, Cookie, History, Cache).
   * **Exempts Extension Data 100%** to preserve AutoLab Extension token.
   * Calls `new-fingerprint` to randomize Canvas, WebGL, AudioContext in 1 click.
+
