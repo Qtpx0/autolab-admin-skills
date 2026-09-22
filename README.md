@@ -1,13 +1,13 @@
 # 🚀 AutoLab Official Admin Skills Kit
 
-[![Version](https://img.shields.io/badge/version-1.5.0-blue.svg?style=flat-square)](manifest.json)
-[![Scale](https://img.shields.io/badge/scale-20%20Seats%20%7C%20307%2B%20Profiles%20%7C%20100%20Proxies-success.svg?style=flat-square)](#)
+[![Version](https://img.shields.io/badge/version-1.7.0-blue.svg?style=flat-square)](manifest.json)
+[![Scale](https://img.shields.io/badge/scale-20%20Seats%20%7C%20308%20Profiles%20%7C%20100%20Proxies-success.svg?style=flat-square)](#)
 [![Proxy](https://img.shields.io/badge/proxy-Webshare%20Static%20Residential-orange.svg?style=flat-square)](#)
 [![Anti--Detect](https://img.shields.io/badge/browser-AdsPower%20Local%20API-purple.svg?style=flat-square)](#)
 [![Security](https://img.shields.io/badge/security-Zero--Leak%20Secret%20Shield-green.svg?style=flat-square)](#)
 
 > **Official AutoLab Production Skills & Knowledge Distribution Repository**  
-> ชุดทักษะและคู่มือปฏิบัติการสำหรับ AI Coding Assistants (Google Antigravity, Claude Desktop, Cursor, Codex) เพื่อควบคุมและบริหารจัดการระบบ Multi-Account ขนาดใหญ่ (ทีมงาน 20 คน / 307+ เพจ / 100 Proxies / โพสต์ 60,000 คลิปต่อเดือน) ด้วย **AdsPower Anti-Detect Browser** และ **Webshare Static Residential Proxy**
+> ชุดทักษะและคู่มือปฏิบัติการสำหรับ AI Coding Assistants (Google Antigravity, Claude Desktop, Cursor, Codex) เพื่อควบคุมและบริหารจัดการระบบ Multi-Account ขนาดใหญ่ (ทีมงาน 20 คน / 308 เพจ / 100 Proxies / โพสต์ 60,000 คลิปต่อเดือน) ด้วย **AdsPower Anti-Detect Browser** และ **Webshare Static Residential Proxy**
 
 ---
 
@@ -57,6 +57,8 @@ https://github.com/Qtpx0/autolab-admin-skills.git
 | หน้าที่ | คำสั่งสำหรับรันใน Terminal | คำอธิบาย |
 | :--- | :--- | :--- |
 | 🩺 **ตรวจสุขภาพ Proxy ทั้งพูล** | `node .agents/skills/webshare-proxy/scripts/audit-proxy-pool.js` | เช็ค 100 IPs สู่ Meta Edge + Spamhaus ใน 5 วิ |
+| 🛡️ **ตรวจสถานะเคอร์เนลจริงทั้งฟลีต** | `npm run adspower:audit-kernel` | สแกนตรวจเคอร์เนลจริง + UA รายกลุ่ม (308 จอ) ผ่าน API v2 |
+| 🔄 **ซิงค์เคอร์เนลสู่ Chrome 153 ทั้งฟลีต** | `npm run adspower:sync-kernel -- --all` | สุ่ม Minor Build แท้สู่ Chrome 153 พร้อมตรวจ Before/After |
 | 🚀 **เสกโปรไฟล์พนักงานใหม่** | `node .agents/skills/adspower-browser/scripts/provision-project.js <ชื่อกลุ่ม> [15]` | สร้างกลุ่ม + 15 จอ + ผูกพ็อกซี่ Round-Robin |
 | 👥 **เสกฟลีตพนักงาน 11 คน (165 จอ)** | `node .agents/skills/adspower-browser/scripts/provision-fleet-11.js` | สคริปต์เสก 11 ทีมพร้อมกัน คุม Proxy ID 51–100 |
 | ⚖️ **เกลี่ยสมดุลพ็อกซี่ 5 ตัว/ทีม** | `node .agents/skills/adspower-browser/scripts/rebalance-proxies-to-5.js` | ปรับสมดุล 20 ทีมให้ได้คนละ 5 IPs ตามโมเดลบ้าน |

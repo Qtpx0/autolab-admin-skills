@@ -83,16 +83,17 @@ AdsPower rotates its Local API port upon restart. AutoLab uses zero-config direc
 ### 4. Mandatory Kernel & User-Agent Integrity Standard (Verified 2026-09-21)
 Modern anti-fraud systems and detection engines (e.g. BrowserScan, Meta Risk Engine) do not rely solely on the HTTP `User-Agent` header; they inspect deep hardware rendering capabilities via **WebGPU / WebGL APIs**.
 
-* **Root Cause of Fingerprint Drift:** When AdsPower upgrades the local browser engine (e.g. to SunBrowser Kernel 152), older profiles keep their static User-Agent (e.g. Chrome 128–133) because anti-detect browsers intentionally freeze UAs to protect active Facebook sessions from overnight shift alerts. If the kernel and UA drift > 3 major versions apart, BrowserScan flags *"Your browser version and User Agent do not match"*.
+* **Root Cause of Fingerprint Drift:** When AdsPower upgrades the local browser engine (e.g. to SunBrowser Kernel 153), older profiles keep their static User-Agent (e.g. Chrome 128–152) because anti-detect browsers intentionally freeze UAs to protect active Facebook sessions from overnight shift alerts. If the kernel and UA drift apart, BrowserScan flags *"Your browser version and User Agent do not match"*.
 * **Safety Invariant:** Updating the profile's User-Agent string to match the current Kernel does NOT clear SQLite cookies, passwords, or session tokens. Facebook login remains 100% intact.
-* **AutoLab Universal Sync Tool:** Use `scripts/sync-user-agents.js` (or `npm run sync:user-agents`) to audit and align profiles without launching any GUI windows:
-  - **Audit Fleet:** `node scripts/sync-user-agents.js --audit`
+* **AutoLab Universal Sync Tool (v2.0):** Use `scripts/sync-user-agents.js` (or NPM scripts) to audit and align profiles without launching any GUI windows:
+  - **Real Audit Fleet (Per Group & Employee):** `npm run adspower:audit-kernel` (or `node scripts/sync-user-agents.js --audit`)
   - **Single Profile:** `node scripts/sync-user-agents.js --serial 3` (or `--id <profileId>`)
-  - **Specific Team Group:** `node scripts/sync-user-agents.js --group "Project Q"`
-  - **Fleet-wide Background Sync:** `node scripts/sync-user-agents.js --all`
-  - **Target Version Override:** `--kernel 152` (auto-detects installed kernel by default)
+  - **Specific Team Group:** `node scripts/sync-user-agents.js --group "Project F"`
+  - **Fleet-wide Background Sync (All 308 Profiles):** `npm run adspower:sync-kernel -- --all`
+  - **Target Version Override:** `--kernel 153` (auto-detects highest downloaded kernel by default)
   - **Dry-run Preview:** `--dry-run`
-* **Randomized Minor Builds:** The tool automatically rotates realistic minor build strings within the target major release (e.g. `152.0.7977.54`, `.48`, `.60`, `.65`) so each profile receives a distinct, authentic signature.
+* **Randomized Minor Builds:** The tool automatically rotates realistic minor build strings within the target major release (e.g. Chrome 153: `153.0.7977.54`, `.48`, `.51`, `.60`, `.65`, `.72`, `.83`, `.91`) so each profile receives a distinct, authentic signature.
+* **Before & After Verification:** Sync mode automatically verifies the updated profile directly against AdsPower API post-update, ensuring zero drift and zero silent failure.
 
 Ensure AdsPower is running (default port `50325`). Pass `--port` / `--api-key` when needed, or set the `ADS_API_KEY` environment variable before running `start`.
 

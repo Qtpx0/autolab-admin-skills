@@ -248,5 +248,18 @@ module.exports = {
 
     // 6. Group Management
     listGroups: () => request('/api/v1/group/list?page_size=100'),
-    createGroup: (group_name, remark = '') => request('/api/v1/group/create', 'POST', { group_name, remark })
+    createGroup: (group_name, remark = '') => request('/api/v1/group/create', 'POST', { group_name, remark }),
+    updateGroup: (group_id, group_name, remark = null) => request('/api/v1/group/update', 'POST', { group_id: String(group_id), group_name, remark }),
+    regroupProfiles: (group_id, user_ids) => request('/api/v1/user/regroup', 'POST', { group_id: String(group_id), user_ids }),
+
+    // 7. Kernel & Fingerprint Inspection
+    listKernels: () => request('/api/v2/browser-profile/kernels', 'GET'),
+    getProfilesUA: (profileIdsOrNos, isProfileNo = false) => {
+        const list = Array.isArray(profileIdsOrNos) ? profileIdsOrNos : [profileIdsOrNos];
+        const payload = isProfileNo ? { profile_no: list } : { profile_id: list };
+        return request('/api/v2/browser-profile/ua', 'POST', payload);
+    },
+
+    // Low-level HTTP request helper
+    request
 };
