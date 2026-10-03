@@ -98,6 +98,9 @@ If any IP fails or exceeds score limits, trigger automated replacement via `swap
    }
    ```
 3. Call AdsPower Local API `create-proxy` or `create-browser` / `update-browser` on Port `50325` (or active port).
+   * **Schema warning:** the `proxy_host/proxy_port/...` shape above is for **profile** `user_proxy_config` only.
+     The **Proxy Pool** API `POST /api/v2/proxy-list/update` requires `{ proxy_id, type, host, port, user, password }`
+     (using `proxy_host` there returns `data error`).
 4. Whenever this workflow creates an AdsPower profile, follow the sibling
    `adspower-browser` AutoLab Official Profile Invariant and persist all three
    Chromium anti-background launch arguments before the profile is opened.
@@ -110,18 +113,33 @@ node .agents/skills/webshare-proxy/scripts/swap-proxy-country.js <profile_no | p
 * **Example:** `node .agents/skills/webshare-proxy/scripts/swap-proxy-country.js "หนัง 001" US`
 * Triggers Webshare v3 replace API, polls status, updates AdsPower profile & proxy pool, and verifies connection with `curl.exe` in under 4 seconds!
 
-### 3.4 In-Place Proxy Pool Synchronization & Swapping (Zero Tag/Profile Loss)
-When proxies need replacement (either single proxy swap or full 100-pool reset), use `sync-proxies-in-place.js`:
+### 3.4 In-Place Proxy Pool Synchronization & Swapping (Diff-Based, Zero-Reshuffle)
+Use `sync-proxies-in-place.js` (v2). **Every command is PLAN-ONLY unless you use an `-apply` command.**
+> npm shortcuts below exist only in the AutoLab main repo. On admin machines use the direct form:
+> `node .agents/skills/webshare-proxy/scripts/sync-proxies-in-place.js --sync-all [--apply]` / `--proxy-id 21 [--apply]` / `--rollback <file> [--apply]`
 ```bash
-# Single Proxy Targeted Replacement (Webshare v3 Replace -> AdsPower in-place update)
-npm run proxy:swap -- --proxy-id 21
-npm run proxy:swap -- --old-ip 82.26.234.42
+# Diff sync — heals ONLY rows whose IP disappeared from Webshare (full reset or partial)
+npm run proxy:sync-all            # plan: shows exactly which rows change
+npm run proxy:sync-apply          # execute + backup + read-back verify
 
-# Full 100-Pool Batch In-Place Sync (When Webshare resets all 100 proxies)
-npm run proxy:sync-all
-npm run proxy:sync-all -- --force   # override active sessions safety guard
+# Single targeted replacement (consumes 1 Webshare replacement from quota)
+npm run proxy:swap 21             # plan for AdsPower row 21
+npm run proxy:swap-apply 21       # execute
+
+# Rollback from a backup snapshot printed by any apply run
+npm run proxy:rollback "<backup.json>"
+npm run proxy:rollback-apply "<backup.json>"
+
+# Offline contract test (no network)
+npm run test:proxy-sync
 ```
+* **Shell gotcha:** in PowerShell `npm run x -- --flag` loses the flag (npm swallows `--apply`, `--force`). Flags are therefore baked into the npm scripts. For `--force`, call node directly:
+  `node .agents/skills/webshare-proxy/scripts/sync-proxies-in-place.js --sync-all --apply --force`
 * **Key Invariants:**
-  1. **Tag Preservation:** Preserves all team tags (`Project Com`, `Project King`, `Project G`, etc.) 100%.
-  2. **Profile Binding Persistence:** All 300+ profiles bound to the proxy rows (`133, 17, 1`, etc.) remain linked to their original row IDs without manual reconfiguration.
-  3. **Live Session Safety Guard:** Refuses to execute full pool sync if active browser sessions are detected, preventing disruption to live staff workflows.
+  1. **Zero-Reshuffle:** rows whose IP still exists in Webshare are never touched; IPs never move between teams/households.
+  2. **Tag & Binding Preservation:** updates are in place on the same `proxy_id`; tags and bound profiles stay attached.
+  3. **Unmanaged rows untouched:** rows whose proxy username is not in this Webshare account are skipped.
+  4. **Backup before write:** snapshot saved to `%APPDATA%\AutoLab\AdminSkills\backups\proxy-sync\` (outside Git, contains passwords).
+  5. **Read-back verification:** every changed row is re-read; mismatches are retried once at 1.5s pace; non-zero exit on failure.
+  6. **Live-session guard limits:** uses `/api/v1/browser/local-active` and sees **this machine only**. Other staff machines are invisible — treat staff as live. The guard fails closed if it cannot read state.
+  7. **Single swap identifies the new IP by set-difference** (before vs after), never by "newest created_at". If the AdsPower update fails after Webshare replaced the IP, `npm run proxy:sync-apply` heals that row only.

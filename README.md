@@ -1,6 +1,6 @@
 # 🚀 AutoLab Official Admin Skills Kit
 
-[![Version](https://img.shields.io/badge/version-1.7.0-blue.svg?style=flat-square)](manifest.json)
+[![Version](https://img.shields.io/badge/version-1.8.1-blue.svg?style=flat-square)](manifest.json)
 [![Scale](https://img.shields.io/badge/scale-20%20Seats%20%7C%20308%20Profiles%20%7C%20100%20Proxies-success.svg?style=flat-square)](#)
 [![Proxy](https://img.shields.io/badge/proxy-Webshare%20Static%20Residential-orange.svg?style=flat-square)](#)
 [![Anti--Detect](https://img.shields.io/badge/browser-AdsPower%20Local%20API-purple.svg?style=flat-square)](#)
@@ -63,6 +63,10 @@ https://github.com/Qtpx0/autolab-admin-skills.git
 | 👥 **เสกฟลีตพนักงาน 11 คน (165 จอ)** | `node .agents/skills/adspower-browser/scripts/provision-fleet-11.js` | สคริปต์เสก 11 ทีมพร้อมกัน คุม Proxy ID 51–100 |
 | ⚖️ **เกลี่ยสมดุลพ็อกซี่ 5 ตัว/ทีม** | `node .agents/skills/adspower-browser/scripts/rebalance-proxies-to-5.js` | ปรับสมดุล 20 ทีมให้ได้คนละ 5 IPs ตามโมเดลบ้าน |
 | 🇺🇸 **สลับ Proxy ไป USA** | `node .agents/skills/webshare-proxy/scripts/swap-proxy-country.js <ชื่อจอ> US` | เปลี่ยนเป็น IP อเมริกา สะอาดกริ๊บใน 3 วินาที |
+| 🔁 **ซิงค์ Proxy หลัง Webshare เปลี่ยน IP (ดูแผน)** | `node .agents/skills/webshare-proxy/scripts/sync-proxies-in-place.js --sync-all` | แสดงเฉพาะแถวที่ IP หาย ไม่เขียนอะไร |
+| ✅ **ซิงค์ Proxy (ลงมือจริง)** | `node .agents/skills/webshare-proxy/scripts/sync-proxies-in-place.js --sync-all --apply` | แก้เฉพาะแถวที่ IP หาย + Backup + ตรวจซ้ำ ไม่สลับ IP ข้ามทีม |
+| 🎯 **เปลี่ยน IP ทีละแถว** | `node .agents/skills/webshare-proxy/scripts/sync-proxies-in-place.js --proxy-id 21` (เติม `--apply` เมื่อจะทำจริง) | ดูแผนก่อน แล้วค่อยเปลี่ยน (ใช้โควต้า Webshare 1 ครั้ง) |
+| ⏪ **ย้อนกลับ Proxy** | `node .agents/skills/webshare-proxy/scripts/sync-proxies-in-place.js --rollback "<backup.json>" --apply` | คืนค่าจากไฟล์ Backup ที่ระบบพิมพ์ไว้ |
 | 🧹 **ล้างแคชเริ่มใหม่ (Clean-Slate)** | `node .agents/skills/adspower-browser/scripts/clean-slate-profile.js <ชื่อจอ>` | ล้างแคช/คุกกี้ สุ่มลายนิ้วมือใหม่ คง Token AutoLab |
 | 🔄 **อัปเดตสกิลเป็นเวอร์ชันล่าสุด** | `node scripts/update-admin-skills.js` | ดึงโค้ดเวอร์ชันล่าสุดและผสาน KI Patches |
 
