@@ -109,3 +109,19 @@ node .agents/skills/webshare-proxy/scripts/swap-proxy-country.js <profile_no | p
 ```
 * **Example:** `node .agents/skills/webshare-proxy/scripts/swap-proxy-country.js "หนัง 001" US`
 * Triggers Webshare v3 replace API, polls status, updates AdsPower profile & proxy pool, and verifies connection with `curl.exe` in under 4 seconds!
+
+### 3.4 In-Place Proxy Pool Synchronization & Swapping (Zero Tag/Profile Loss)
+When proxies need replacement (either single proxy swap or full 100-pool reset), use `sync-proxies-in-place.js`:
+```bash
+# Single Proxy Targeted Replacement (Webshare v3 Replace -> AdsPower in-place update)
+npm run proxy:swap -- --proxy-id 21
+npm run proxy:swap -- --old-ip 82.26.234.42
+
+# Full 100-Pool Batch In-Place Sync (When Webshare resets all 100 proxies)
+npm run proxy:sync-all
+npm run proxy:sync-all -- --force   # override active sessions safety guard
+```
+* **Key Invariants:**
+  1. **Tag Preservation:** Preserves all team tags (`Project Com`, `Project King`, `Project G`, etc.) 100%.
+  2. **Profile Binding Persistence:** All 300+ profiles bound to the proxy rows (`133, 17, 1`, etc.) remain linked to their original row IDs without manual reconfiguration.
+  3. **Live Session Safety Guard:** Refuses to execute full pool sync if active browser sessions are detected, preventing disruption to live staff workflows.
