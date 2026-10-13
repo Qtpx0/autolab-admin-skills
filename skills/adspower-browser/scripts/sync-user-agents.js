@@ -1,8 +1,8 @@
 /**
- * AutoLab Universal AdsPower User-Agent & Kernel Integrity Sync Tool (v2.0)
+ * AutoLab Universal AdsPower User-Agent & Kernel Integrity Sync Tool (v2.1)
  * 
  * Capabilities:
- *  1. Auto-detects installed SunBrowser kernels on the local machine via AdsPower API (e.g. Chrome 153).
+ *  1. Auto-detects installed SunBrowser kernels on the local machine via AdsPower API (e.g. Chrome 154).
  *  2. Real Audit Mode: Fetches actual User-Agent & Kernel strings via batch API (/api/v2/browser-profile/ua).
  *  3. Per-Group & Per-Employee Breakdown: Identifies owner, group, serial number, and outdated status.
  *  4. Realistic Minor Build Synthesizer: Rotates authentic Chromium minor builds across the fleet.
@@ -247,7 +247,7 @@ async function main() {
     }
 
     console.log('========================================================================================');
-    console.log('🛡️  [AutoLab] Universal User-Agent & Kernel Integrity Manager (v2.0)');
+    console.log('🛡️  [AutoLab] Universal User-Agent & Kernel Integrity Manager (v2.1)');
     console.log(`🎯 Active Target Kernel : Chrome ${opts.targetKernel} (Auto-detected latest)`);
     console.log(`⏱️  API Rate Limit Guard: ${opts.rateLimit}ms`);
     if (opts.dryRun) console.log('🔍 DRY-RUN MODE: No changes will be applied.');
@@ -272,6 +272,7 @@ async function main() {
         // จัดกลุ่มตาม Team / Project
         const grouped = {};
         const fleetVersions = {};
+        const uniqueBuilds = new Set();
 
         for (const p of activeProfiles) {
             const grp = p.group_name || 'No Group';
@@ -280,6 +281,9 @@ async function main() {
             const uaInfo = uaMap.get(p.user_id) || { majorKernel: 'Unknown', minorBuild: 'Unknown' };
             const kVer = uaInfo.majorKernel;
             fleetVersions[kVer] = (fleetVersions[kVer] || 0) + 1;
+            if (uaInfo.minorBuild && uaInfo.minorBuild !== 'Unknown') {
+                uniqueBuilds.add(uaInfo.minorBuild);
+            }
 
             const isUpToDate = kVer === String(opts.targetKernel);
             grouped[grp].push({
@@ -329,6 +333,7 @@ async function main() {
         console.log('📊 สรุปภาพรวมสถานะเคอร์เนลทั้งฟลีต:');
         console.log(`   • เวอร์ชันเป้าหมายล่าสุด (Chrome ${opts.targetKernel}) : ${totalUpToDate} จอ (${((totalUpToDate / activeProfiles.length) * 100).toFixed(1)}%)`);
         console.log(`   • เวอร์ชันเก่าที่ต้องอัปเดต (Outdated)         : ${totalOutdated} จอ (${((totalOutdated / activeProfiles.length) * 100).toFixed(1)}%)`);
+        console.log(`   • จำนวน Build ย่อยที่ไม่ซ้ำกัน (Unique Builds)  : ${uniqueBuilds.size}/${activeProfiles.length} จอ (${((uniqueBuilds.size / activeProfiles.length) * 100).toFixed(1)}%)`);
         console.log('\n📈 รายละเอียดแยกตามเวอร์ชันจริง:');
         for (const [ver, count] of Object.entries(fleetVersions).sort((a, b) => b[0] - a[0])) {
             const tag = ver === String(opts.targetKernel) ? '⭐ (เป้าหมายล่าสุด)' : '⚠️ (ค้างเวอร์ชันเก่า)';
@@ -367,6 +372,14 @@ async function main() {
         return;
     }
 
+    // เรียงลำดับตาม Serial Number ให้ตายตัวเสมอ เพื่อให้การใช้ --start <index> แม่นยำ 100%
+    targets.sort((a, b) => {
+        const snA = parseInt(a.serial_number, 10) || 999999;
+        const snB = parseInt(b.serial_number, 10) || 999999;
+        if (snA !== snB) return snA - snB;
+        return String(a.user_id || '').localeCompare(String(b.user_id || ''));
+    });
+
     console.log(`📋 พบโปรไฟล์เป้าหมายที่จะดำเนินการ: ${targets.length} จอ\n`);
 
     const startIndex = Math.max(0, opts.start - 1);
@@ -376,12 +389,16 @@ async function main() {
     }
 
     // -------------------------------------------------------------------------
-    // 3. Before Snapshot (เก็บบันทึกค่าเดิมก่อนเริ่มอัปเดต)
+    // 3. Before Snapshot (เก็บบันทึกค่าเดิมก่อนเริ่มอัปเดต + โหลด UA กันซ้ำข้ามรอบ)
     // -------------------------------------------------------------------------
     let beforeStats = {};
     if (!opts.noSnapshot) {
         console.log('📸 กำลังบันทึกสถานะก่อนอัปเดต (Before Snapshot)...');
-        const beforeUaMap = await fetchProfilesUAMap(executeTargets);
+        const snapshotPool = startIndex > 0 ? targets : executeTargets;
+        const beforeUaMap = await fetchProfilesUAMap(snapshotPool);
+        for (const info of beforeUaMap.values()) {
+            if (info.ua) ASSIGNED_FLEET_UAS.add(info.ua);
+        }
         for (const t of executeTargets) {
             const info = beforeUaMap.get(t.user_id) || { majorKernel: 'Unknown' };
             beforeStats[info.majorKernel] = (beforeStats[info.majorKernel] || 0) + 1;
@@ -414,17 +431,27 @@ async function main() {
             continue;
         }
 
+        const updatePayload = {
+            user_id: p.user_id,
+            fingerprint_config: {
+                browser_kernel_config: {
+                    type: 'chrome',
+                    version: String(opts.targetKernel)
+                },
+                ua: newUA
+            }
+        };
+
         try {
-            await api.updateProfile({
-                user_id: p.user_id,
-                fingerprint_config: {
-                    browser_kernel_config: {
-                        type: 'chrome',
-                        version: String(opts.targetKernel)
-                    },
-                    ua: newUA
+            let res = await api.updateProfile(updatePayload);
+            if (res && typeof res.code === 'number' && res.code !== 0) {
+                // หากติด Rate Limit ให้พักและลองซ้ำอัตโนมัติ 1 ครั้ง
+                await api.sleep(Math.max(1300, opts.rateLimit * 2));
+                res = await api.updateProfile(updatePayload);
+                if (res && typeof res.code === 'number' && res.code !== 0) {
+                    throw new Error(res.msg || `API Error (code ${res.code})`);
                 }
-            });
+            }
             console.log(`  ✓ ${indexStr} ${snStr} | ${grpStr} | ${nameStr} ➔ Chrome ${opts.targetKernel} (${newUA.match(/Chrome\/([0-9.]+)/)?.[1] || ''})`);
             successCount++;
             planRecords.push({ p, newUA });
