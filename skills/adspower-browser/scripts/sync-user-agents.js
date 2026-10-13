@@ -1,8 +1,8 @@
 /**
- * AutoLab Universal AdsPower User-Agent & Kernel Integrity Sync Tool (v2.0)
+ * AutoLab Universal AdsPower User-Agent & Kernel Integrity Sync Tool (v2.1)
  * 
  * Capabilities:
- *  1. Auto-detects installed SunBrowser kernels on the local machine via AdsPower API (e.g. Chrome 153).
+ *  1. Auto-detects installed SunBrowser kernels on the local machine via AdsPower API (e.g. Chrome 154).
  *  2. Real Audit Mode: Fetches actual User-Agent & Kernel strings via batch API (/api/v2/browser-profile/ua).
  *  3. Per-Group & Per-Employee Breakdown: Identifies owner, group, serial number, and outdated status.
  *  4. Realistic Minor Build Synthesizer: Rotates authentic Chromium minor builds across the fleet.
@@ -15,34 +15,6 @@ const fs = require('fs');
 const path = require('path');
 const api = require('./api-client');
 
-const KNOWN_MINOR_BUILDS = {
-    '153': [
-        '153.0.8010.36',
-        '153.0.8010.37',
-        '153.0.8010.40',
-        '153.0.8010.42',
-        '153.0.7977.48',
-        '153.0.7977.51',
-        '153.0.7977.54',
-        '153.0.7977.60',
-        '153.0.7977.65'
-    ],
-    '152': [
-        '152.0.7977.48',
-        '152.0.7977.51',
-        '152.0.7977.54',
-        '152.0.7977.60',
-        '152.0.7977.65',
-        '152.0.7977.75',
-        '152.0.7977.83'
-    ],
-    '150': [
-        '150.0.7871.40',
-        '150.0.7871.47',
-        '150.0.7871.50',
-        '150.0.7871.65'
-    ]
-};
 
 function getInstalledKernels() {
     try {
@@ -83,19 +55,42 @@ async function getLatestDownloadedKernel() {
     return local[0] || '153';
 }
 
-function generateRealisticUA(majorVer = '153') {
-    const builds = KNOWN_MINOR_BUILDS[majorVer];
-    let build;
-    if (builds && builds.length > 0) {
-        build = builds[Math.floor(Math.random() * builds.length)];
+const ASSIGNED_FLEET_UAS = new Set();
+
+function generateRealisticUA(majorVer = '154') {
+    const major = parseInt(majorVer, 10);
+    // Base branch calibration matching real Chromium releases and AdsPower synthesizer:
+    // 150 = ~7870, 152 = ~7970, 153 = ~8010, 154 = ~8035 (e.g. 8037.57), 155 = ~8059
+    let minBranch, maxBranch;
+    if (major === 154) {
+        minBranch = 8025;
+        maxBranch = 8048;
+    } else if (major === 153) {
+        minBranch = 7975;
+        maxBranch = 8015;
+    } else if (major === 155) {
+        minBranch = 8050;
+        maxBranch = 8070;
     } else {
-        const branch = 7900 + (parseInt(majorVer, 10) - 150) * 50;
-        const patches = [48, 51, 54, 60, 65, 72, 83, 91];
-        const patch = patches[Math.floor(Math.random() * patches.length)];
-        build = `${majorVer}.0.${branch}.${patch}`;
+        const base = 7900 + (major - 150) * 38;
+        minBranch = base - 10;
+        maxBranch = base + 15;
     }
-    return `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${build} Safari/537.36`;
+
+    let ua;
+    let attempts = 0;
+    do {
+        const branch = Math.floor(Math.random() * (maxBranch - minBranch + 1)) + minBranch;
+        const patch = Math.floor(Math.random() * (185 - 15 + 1)) + 15;
+        const build = `${major}.0.${branch}.${patch}`;
+        ua = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${build} Safari/537.36`;
+        attempts++;
+    } while (ASSIGNED_FLEET_UAS.has(ua) && attempts < 500);
+
+    ASSIGNED_FLEET_UAS.add(ua);
+    return ua;
 }
+
 
 function parseCliArgs() {
     const args = process.argv.slice(2);
@@ -106,7 +101,9 @@ function parseCliArgs() {
         id: null,
         group: null,
         dryRun: false,
-        rateLimit: 1400
+        rateLimit: 250,
+        start: 1,
+        noSnapshot: false
     };
 
     for (let i = 0; i < args.length; i++) {
@@ -129,7 +126,11 @@ function parseCliArgs() {
         } else if (arg === '--kernel' || arg === '-k') {
             options.targetKernel = args[++i];
         } else if (arg === '--rate-limit') {
-            options.rateLimit = parseInt(args[++i], 10) || 1400;
+            options.rateLimit = parseInt(args[++i], 10) || 250;
+        } else if (arg === '--start') {
+            options.start = parseInt(args[++i], 10) || 1;
+        } else if (arg === '--no-snapshot') {
+            options.noSnapshot = true;
         } else if (arg === '--help' || arg === '-h') {
             options.mode = 'help';
         }
@@ -140,7 +141,7 @@ function parseCliArgs() {
 
 function printHelp() {
     console.log(`
-AutoLab Universal User-Agent & Kernel Integrity Sync Tool (v2.0)
+AutoLab Universal User-Agent & Kernel Integrity Sync Tool (v2.1)
 
 Usage:
   node sync-user-agents.js [options]
@@ -154,8 +155,10 @@ Modes:
 
 Options:
   --kernel <version>      Target Chrome major version (default: auto-detected highest downloaded)
+  --start <index>         Resume or start execution from a 1-based profile index (e.g. --start 115)
+  --no-snapshot           Fast mode: skip before/after snapshot verification for maximum speed
+  --rate-limit <ms>       Delay between API requests (default: 250ms)
   --dry-run               Preview changes without writing to AdsPower API
-  --rate-limit <ms>       Delay between API requests (default: 1400ms)
   --help                  Show this help message
 
 Examples:
@@ -163,6 +166,7 @@ Examples:
   node sync-user-agents.js --serial 3
   node sync-user-agents.js --group "Project F"
   node sync-user-agents.js --all
+  node sync-user-agents.js --all --start 115 --rate-limit 150 --no-snapshot
 `);
 }
 
@@ -243,7 +247,7 @@ async function main() {
     }
 
     console.log('========================================================================================');
-    console.log('🛡️  [AutoLab] Universal User-Agent & Kernel Integrity Manager (v2.0)');
+    console.log('🛡️  [AutoLab] Universal User-Agent & Kernel Integrity Manager (v2.1)');
     console.log(`🎯 Active Target Kernel : Chrome ${opts.targetKernel} (Auto-detected latest)`);
     console.log(`⏱️  API Rate Limit Guard: ${opts.rateLimit}ms`);
     if (opts.dryRun) console.log('🔍 DRY-RUN MODE: No changes will be applied.');
@@ -268,6 +272,7 @@ async function main() {
         // จัดกลุ่มตาม Team / Project
         const grouped = {};
         const fleetVersions = {};
+        const uniqueBuilds = new Set();
 
         for (const p of activeProfiles) {
             const grp = p.group_name || 'No Group';
@@ -276,6 +281,9 @@ async function main() {
             const uaInfo = uaMap.get(p.user_id) || { majorKernel: 'Unknown', minorBuild: 'Unknown' };
             const kVer = uaInfo.majorKernel;
             fleetVersions[kVer] = (fleetVersions[kVer] || 0) + 1;
+            if (uaInfo.minorBuild && uaInfo.minorBuild !== 'Unknown') {
+                uniqueBuilds.add(uaInfo.minorBuild);
+            }
 
             const isUpToDate = kVer === String(opts.targetKernel);
             grouped[grp].push({
@@ -325,6 +333,7 @@ async function main() {
         console.log('📊 สรุปภาพรวมสถานะเคอร์เนลทั้งฟลีต:');
         console.log(`   • เวอร์ชันเป้าหมายล่าสุด (Chrome ${opts.targetKernel}) : ${totalUpToDate} จอ (${((totalUpToDate / activeProfiles.length) * 100).toFixed(1)}%)`);
         console.log(`   • เวอร์ชันเก่าที่ต้องอัปเดต (Outdated)         : ${totalOutdated} จอ (${((totalOutdated / activeProfiles.length) * 100).toFixed(1)}%)`);
+        console.log(`   • จำนวน Build ย่อยที่ไม่ซ้ำกัน (Unique Builds)  : ${uniqueBuilds.size}/${activeProfiles.length} จอ (${((uniqueBuilds.size / activeProfiles.length) * 100).toFixed(1)}%)`);
         console.log('\n📈 รายละเอียดแยกตามเวอร์ชันจริง:');
         for (const [ver, count] of Object.entries(fleetVersions).sort((a, b) => b[0] - a[0])) {
             const tag = ver === String(opts.targetKernel) ? '⭐ (เป้าหมายล่าสุด)' : '⚠️ (ค้างเวอร์ชันเก่า)';
@@ -363,19 +372,41 @@ async function main() {
         return;
     }
 
+    // เรียงลำดับตาม Serial Number ให้ตายตัวเสมอ เพื่อให้การใช้ --start <index> แม่นยำ 100%
+    targets.sort((a, b) => {
+        const snA = parseInt(a.serial_number, 10) || 999999;
+        const snB = parseInt(b.serial_number, 10) || 999999;
+        if (snA !== snB) return snA - snB;
+        return String(a.user_id || '').localeCompare(String(b.user_id || ''));
+    });
+
     console.log(`📋 พบโปรไฟล์เป้าหมายที่จะดำเนินการ: ${targets.length} จอ\n`);
 
-    // -------------------------------------------------------------------------
-    // 3. Before Snapshot (เก็บบันทึกค่าเดิมก่อนเริ่มอัปเดต)
-    // -------------------------------------------------------------------------
-    console.log('📸 กำลังบันทึกสถานะก่อนอัปเดต (Before Snapshot)...');
-    const beforeUaMap = await fetchProfilesUAMap(targets);
-    const beforeStats = {};
-    for (const t of targets) {
-        const info = beforeUaMap.get(t.user_id) || { majorKernel: 'Unknown' };
-        beforeStats[info.majorKernel] = (beforeStats[info.majorKernel] || 0) + 1;
+    const startIndex = Math.max(0, opts.start - 1);
+    const executeTargets = targets.slice(startIndex);
+    if (startIndex > 0) {
+        console.log(`⏩ ข้าม ${startIndex} จอแรกตามที่ระบุ (--start ${opts.start}) ➔ เริ่มดำเนินการที่จอ [${opts.start}/${targets.length}] ทันที (${executeTargets.length} จอที่เหลือ)\n`);
     }
-    console.log('   ✅ บันทึกสถานะก่อนเริ่มเรียบร้อยแล้ว\n');
+
+    // -------------------------------------------------------------------------
+    // 3. Before Snapshot (เก็บบันทึกค่าเดิมก่อนเริ่มอัปเดต + โหลด UA กันซ้ำข้ามรอบ)
+    // -------------------------------------------------------------------------
+    let beforeStats = {};
+    if (!opts.noSnapshot) {
+        console.log('📸 กำลังบันทึกสถานะก่อนอัปเดต (Before Snapshot)...');
+        const snapshotPool = startIndex > 0 ? targets : executeTargets;
+        const beforeUaMap = await fetchProfilesUAMap(snapshotPool);
+        for (const info of beforeUaMap.values()) {
+            if (info.ua) ASSIGNED_FLEET_UAS.add(info.ua);
+        }
+        for (const t of executeTargets) {
+            const info = beforeUaMap.get(t.user_id) || { majorKernel: 'Unknown' };
+            beforeStats[info.majorKernel] = (beforeStats[info.majorKernel] || 0) + 1;
+        }
+        console.log('   ✅ บันทึกสถานะก่อนเริ่มเรียบร้อยแล้ว\n');
+    } else {
+        console.log('⚡ โหมดความเร็วสูง (--no-snapshot): ข้ามการตรวจก่อนหน้า เริ่มกระบวนการอัปเดตทันที\n');
+    }
 
     // -------------------------------------------------------------------------
     // 4. Batch Execution
@@ -385,10 +416,11 @@ async function main() {
     let failCount = 0;
     const planRecords = [];
 
-    for (let i = 0; i < targets.length; i++) {
-        const p = targets[i];
+    for (let i = 0; i < executeTargets.length; i++) {
+        const p = executeTargets[i];
+        const currentIdx = startIndex + i + 1;
         const newUA = generateRealisticUA(opts.targetKernel);
-        const indexStr = `[${i + 1}/${targets.length}]`;
+        const indexStr = `[${currentIdx}/${targets.length}]`;
         const snStr = p.serial_number ? `Serial #${String(p.serial_number).padStart(3, ' ')}` : 'ID ' + p.user_id;
         const grpStr = (p.group_name || 'No Group').padEnd(14, ' ');
         const nameStr = p.name.padEnd(16, ' ');
@@ -399,17 +431,27 @@ async function main() {
             continue;
         }
 
+        const updatePayload = {
+            user_id: p.user_id,
+            fingerprint_config: {
+                browser_kernel_config: {
+                    type: 'chrome',
+                    version: String(opts.targetKernel)
+                },
+                ua: newUA
+            }
+        };
+
         try {
-            await api.updateProfile({
-                user_id: p.user_id,
-                fingerprint_config: {
-                    browser_kernel_config: {
-                        type: 'chrome',
-                        version: String(opts.targetKernel)
-                    },
-                    ua: newUA
+            let res = await api.updateProfile(updatePayload);
+            if (res && typeof res.code === 'number' && res.code !== 0) {
+                // หากติด Rate Limit ให้พักและลองซ้ำอัตโนมัติ 1 ครั้ง
+                await api.sleep(Math.max(1300, opts.rateLimit * 2));
+                res = await api.updateProfile(updatePayload);
+                if (res && typeof res.code === 'number' && res.code !== 0) {
+                    throw new Error(res.msg || `API Error (code ${res.code})`);
                 }
-            });
+            }
             console.log(`  ✓ ${indexStr} ${snStr} | ${grpStr} | ${nameStr} ➔ Chrome ${opts.targetKernel} (${newUA.match(/Chrome\/([0-9.]+)/)?.[1] || ''})`);
             successCount++;
             planRecords.push({ p, newUA });
@@ -418,7 +460,7 @@ async function main() {
             failCount++;
         }
 
-        if (i < targets.length - 1) {
+        if (i < executeTargets.length - 1) {
             await api.sleep(opts.rateLimit);
         }
     }
@@ -433,39 +475,45 @@ async function main() {
     // -------------------------------------------------------------------------
     // 5. Verification Pass (ตรวจสอบความถูกต้อง หลังอัปเดต)
     // -------------------------------------------------------------------------
-    console.log('\n🔍 กำลังตรวจสอบความถูกต้องหลังอัปเดต (Verification Pass)...');
-    await api.sleep(1500);
-    const afterUaMap = await fetchProfilesUAMap(targets);
+    if (!opts.noSnapshot) {
+        console.log('\n🔍 กำลังตรวจสอบความถูกต้องหลังอัปเดต (Verification Pass)...');
+        await api.sleep(1000);
+        const afterUaMap = await fetchProfilesUAMap(executeTargets);
 
-    let verifiedCount = 0;
-    const afterStats = {};
+        let verifiedCount = 0;
+        const afterStats = {};
 
-    for (const t of targets) {
-        const afterInfo = afterUaMap.get(t.user_id) || { majorKernel: 'Unknown' };
-        afterStats[afterInfo.majorKernel] = (afterStats[afterInfo.majorKernel] || 0) + 1;
-        if (afterInfo.majorKernel === String(opts.targetKernel)) {
-            verifiedCount++;
+        for (const t of executeTargets) {
+            const afterInfo = afterUaMap.get(t.user_id) || { majorKernel: 'Unknown' };
+            afterStats[afterInfo.majorKernel] = (afterStats[afterInfo.majorKernel] || 0) + 1;
+            if (afterInfo.majorKernel === String(opts.targetKernel)) {
+                verifiedCount++;
+            }
         }
-    }
 
-    // -------------------------------------------------------------------------
-    // 6. Final Comparison Report (รายงานเปรียบเทียบ ก่อน - หลัง)
-    // -------------------------------------------------------------------------
-    console.log('\n========================================================================================');
-    console.log('🎉 สรุปผลการอัปเดตและตรวจสอบความถูกต้อง ก่อน - หลัง (Before & After Verification)');
-    console.log('========================================================================================');
-    console.log(`📊 จำนวนโปรไฟล์ที่ดำเนินการ : ${targets.length} จอ`);
-    console.log(`✅ อัปเดตสำเร็จ             : ${successCount} จอ`);
-    if (failCount > 0) console.log(`❌ อัปเดตล้มเหลว            : ${failCount} จอ`);
-    console.log(`🛡️  ผ่านการตรวจสอบ 100%      : ${verifiedCount}/${targets.length} จอ (ยืนยันค่าจริงจาก AdsPower API)`);
+        console.log('\n========================================================================================');
+        console.log('🎉 สรุปผลการอัปเดตและตรวจสอบความถูกต้อง ก่อน - หลัง (Before & After Verification)');
+        console.log('========================================================================================');
+        console.log(`📊 จำนวนโปรไฟล์ที่ดำเนินการ : ${executeTargets.length} จอ`);
+        console.log(`✅ อัปเดตสำเร็จ             : ${successCount} จอ`);
+        if (failCount > 0) console.log(`❌ อัปเดตล้มเหลว            : ${failCount} จอ`);
+        console.log(`🛡️  ผ่านการตรวจสอบ 100%      : ${verifiedCount}/${executeTargets.length} จอ (ยืนยันค่าจริงจาก AdsPower API)`);
 
-    console.log('\n🔄 สถิติเวอร์ชัน ก่อน ➔ หลัง:');
-    const allKnownVers = Array.from(new Set([...Object.keys(beforeStats), ...Object.keys(afterStats)])).sort((a, b) => b - a);
-    for (const v of allKnownVers) {
-        const bCount = beforeStats[v] || 0;
-        const aCount = afterStats[v] || 0;
-        const tag = v === String(opts.targetKernel) ? '✅ [เวอร์ชันล่าสุด]' : '➔ อัปเกรดเป็นรุ่นใหม่แล้ว';
-        console.log(`   • Chrome ${v.padEnd(3, ' ')} : ${String(bCount).padStart(3, ' ')} จอ ➔ ${String(aCount).padStart(3, ' ')} จอ ${tag}`);
+        console.log('\n🔄 สถิติเวอร์ชัน ก่อน ➔ หลัง:');
+        const allKnownVers = Array.from(new Set([...Object.keys(beforeStats), ...Object.keys(afterStats)])).sort((a, b) => b - a);
+        for (const v of allKnownVers) {
+            const bCount = beforeStats[v] || 0;
+            const aCount = afterStats[v] || 0;
+            const tag = v === String(opts.targetKernel) ? '✅ [เวอร์ชันล่าสุด]' : '➔ อัปเกรดเป็นรุ่นใหม่แล้ว';
+            console.log(`   • Chrome ${v.padEnd(3, ' ')} : ${String(bCount).padStart(3, ' ')} จอ ➔ ${String(aCount).padStart(3, ' ')} จอ ${tag}`);
+        }
+    } else {
+        console.log('\n========================================================================================');
+        console.log('🎉 การอัปเดตเสร็จสมบูรณ์เรียบร้อยแล้ว (Fast Mode)');
+        console.log('========================================================================================');
+        console.log(`📊 จำนวนโปรไฟล์ที่ดำเนินการ : ${executeTargets.length} จอ`);
+        console.log(`✅ อัปเดตสำเร็จ             : ${successCount} จอ`);
+        if (failCount > 0) console.log(`❌ อัปเดตล้มเหลว            : ${failCount} จอ`);
     }
 
     console.log('\n🔒 การันตีความปลอดภัยของระบบ:');
