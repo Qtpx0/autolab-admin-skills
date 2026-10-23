@@ -71,6 +71,9 @@ function generateRealisticUA(majorVer = '154') {
     } else if (major === 155) {
         minBranch = 8050;
         maxBranch = 8070;
+    } else if (major === 156) {
+        minBranch = 8068;
+        maxBranch = 8092;
     } else {
         const base = 7900 + (major - 150) * 38;
         minBranch = base - 10;
