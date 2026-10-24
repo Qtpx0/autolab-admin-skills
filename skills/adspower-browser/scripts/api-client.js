@@ -166,9 +166,72 @@ module.exports = {
         return request('/api/v1/user/create', 'POST', payload);
     },
     /**
+     * Resolve Dedicated Group Proxy Pool (Strict Agency Isolation Guard)
+     * AutoLab Multi-Account Invariant: Profiles in a group MUST only bind to proxies dedicated to that group.
+     * If preferredProxyId is supplied, validates that it belongs to the group's tagged pool.
+     * If not supplied, automatically selects the least-loaded proxy (lowest profile_count) in the group.
+     */
+    resolveDedicatedProxy: async function({ group_id, group_name = '', preferredProxyId = null, enforce = true } = {}) {
+        let targetGroupName = group_name;
+        if (!targetGroupName && group_id && group_id !== '0') {
+            try {
+                const gRes = await request('/api/v1/group/list?page_size=100');
+                const g = (gRes?.list || []).find(x => String(x.group_id) === String(group_id));
+                if (g) targetGroupName = g.group_name;
+            } catch (e) {}
+        }
+
+        if (!targetGroupName) return preferredProxyId;
+
+        const normG = targetGroupName.toLowerCase().replace(/\s+/g, '');
+        const proxiesRes = await request('/api/v2/proxy-list/list', 'POST', { page: 1, limit: 100 });
+        const allProxies = proxiesRes?.list || [];
+
+        const matchedProxies = allProxies.filter(p => {
+            const tagObj = (p.proxy_tags && p.proxy_tags[0]) || null;
+            const tagName = tagObj ? tagObj.name.trim() : '';
+            const remarkName = (p.remark || '').trim();
+
+            if (tagName) {
+                const normTag = tagName.toLowerCase().replace(/\s+/g, '');
+                return normTag === normG ||
+                       (normG.includes('aor') && normTag.includes('aor')) ||
+                       (normG.includes('ninew') && normTag.includes('ninew'));
+            }
+
+            // Fallback to remark only if no tag exists (strictly anchored to project prefix)
+            const cleanRemark = remarkName.toLowerCase();
+            const prefixRegex = new RegExp(`^${normG}\\b`, 'i');
+            const cleanNormRmk = cleanRemark.replace(/\s+/g, '');
+            return prefixRegex.test(cleanNormRmk) && !cleanRemark.includes('ย้ายจาก');
+        });
+
+        if (matchedProxies.length === 0) {
+            return preferredProxyId; // No dedicated pool found, allow fallback
+        }
+
+        const validIds = matchedProxies.map(p => String(p.proxy_id));
+
+        if (preferredProxyId) {
+            const prefStr = String(preferredProxyId);
+            if (validIds.includes(prefStr)) {
+                return prefStr;
+            }
+            if (enforce) {
+                throw new Error(`[STRICT PROXY ISOLATION ERROR]: Proxy ID "${preferredProxyId}" does not belong to "${targetGroupName}". Dedicated Proxies for this group are: [${validIds.join(', ')}]`);
+            }
+        }
+
+        // Auto-assign least-loaded proxy in dedicated pool (Household Normalcy 3-4 profiles/IP)
+        matchedProxies.sort((a, b) => (parseInt(a.profile_count, 10) || 0) - (parseInt(b.profile_count, 10) || 0));
+        return String(matchedProxies[0].proxy_id);
+    },
+
+    /**
      * AutoLab Golden Standard Profile Factory
      * Creates an AdsPower profile guaranteed to have Windows 10/11 Desktop OS, AudioContext noise ON,
      * WebRTC replace, IP-based Timezone/Location, and automatically persists the 3 Chromium occlusion flags.
+     * Enforces Strict Group Proxy Isolation: automatically allocates from the group's dedicated proxy pool.
      * Includes built-in rate-limit safety pause (1300ms) for reliable batch operations.
      */
     createAutoLabProfile: async function({ name, group_id = '0', proxyid = null, user_proxy_config = null, remark = '', tabs = [] }) {
@@ -179,8 +242,23 @@ module.exports = {
             fingerprint_config: { ...AUTOLAB_GOLDEN_FINGERPRINT }
         };
 
-        if (proxyid) {
-            payload.proxyid = String(proxyid);
+        // Enforce Strict Group Proxy Isolation Guard
+        let resolvedProxyId = proxyid;
+        if (group_id && group_id !== '0') {
+            try {
+                resolvedProxyId = await module.exports.resolveDedicatedProxy({
+                    group_id: String(group_id),
+                    preferredProxyId: proxyid,
+                    enforce: true
+                });
+            } catch (err) {
+                console.error(`[AutoLab Proxy Guard]: ${err.message}`);
+                throw err;
+            }
+        }
+
+        if (resolvedProxyId) {
+            payload.proxyid = String(resolvedProxyId);
         } else if (user_proxy_config) {
             payload.user_proxy_config = user_proxy_config;
         } else {
@@ -220,10 +298,15 @@ module.exports = {
     deleteProfiles: (profile_ids) => request('/api/v1/user/delete', 'POST', { profile_ids }),
     
     // 2. Saved Proxy Pool Binding (Strict Agency Standard)
-    bindProxyPool: (userId, proxyId) => request('/api/v1/user/update', 'POST', {
-        user_id: userId,
-        proxyid: String(proxyId)
-    }),
+    bindProxyPool: async function(userId, proxyId, { group_id = null, enforce = false } = {}) {
+        if (enforce && group_id) {
+            await module.exports.resolveDedicatedProxy({ group_id, preferredProxyId: proxyId, enforce: true });
+        }
+        return request('/api/v1/user/update', 'POST', {
+            user_id: userId,
+            proxyid: String(proxyId)
+        });
+    },
 
     // 3. Browser Controls
     openBrowser: (profile_id, launchArgs = []) => {

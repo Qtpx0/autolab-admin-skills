@@ -98,6 +98,20 @@ Modern anti-fraud systems and detection engines (e.g. BrowserScan, Meta Risk Eng
 * **Wide-Spectrum Dynamic Chromium Synthesizer:** Replaced legacy static build arrays with a continuous branch synthesizer (e.g. Chrome 154 branch `8025`–`8048`, patch `15`–`185`, plus collision-guard Set). Across 308 fleet profiles, yields ~300 unique, authentic Chromium signatures with zero collisions.
 * **Before & After Verification:** By default, sync mode automatically queries profile UAs via AdsPower API post-update to assert 100% fidelity. Fast mode (`--no-snapshot`) skips pre/post verification passes when immediate execution is required.
 
+### 5. Mandatory Group Proxy Isolation Standard & Zero Cross-Team Binding Guard (Verified 2026-10-24)
+AutoLab Agency Fleet operates 20 distinct employee teams (Project Q, F, Bow, Lilly, Boy, Aorra, Carry, Game, Jes, NiNew, Sky, W, N, G, King, Com, Ton, H, Kik, S) backed by 100 dedicated Webshare Singapore Static Residential Proxies (Proxy ID 1–100).
+
+- **Strict Isolation Invariant:** Every browser profile in a group MUST strictly and exclusively bind to a proxy tagged to that group. Profiles belonging to Team A are strictly FORBIDDEN from binding to proxies assigned to Team B.
+- **Zero Cross-Team Tainting:** Binding an account to another team's proxy contaminates the IP boundary, exposes accounts to cross-session risk, and violates Meta's Household Normalcy Model (3–4 profiles per dedicated residential IP).
+- **Automated Guardrail Enforcement:**
+  - `api.createAutoLabProfile({ name, group_id, proxyid })` automatically invokes `resolveDedicatedProxy()`:
+    - If `proxyid` is omitted: dynamically assigns the least-loaded proxy in the group's tagged pool.
+    - If `proxyid` is specified: asserts that the requested proxy belongs to the group. Cross-group bindings immediately throw `[STRICT PROXY ISOLATION ERROR]` and abort execution.
+  - To verify fleet-wide integrity across all 308 profiles:
+    ```bash
+    node scripts/full-fleet-audit.js
+    ```
+
 Ensure AdsPower is running (default port `50325`). Pass `--port` / `--api-key` when needed, or set the `ADS_API_KEY` environment variable before running `start`.
 
 The CLI itself supports launching the AdsPower application via API key. If the AdsPower client is installed, AdsPower headless mode can also be launched via API key.
