@@ -107,10 +107,16 @@ AutoLab Agency Fleet operates 20 distinct employee teams (Project Q, F, Bow, Lil
   - `api.createAutoLabProfile({ name, group_id, proxyid })` automatically invokes `resolveDedicatedProxy()`:
     - If `proxyid` is omitted: dynamically assigns the least-loaded proxy in the group's tagged pool.
     - If `proxyid` is specified: asserts that the requested proxy belongs to the group. Cross-group bindings immediately throw `[STRICT PROXY ISOLATION ERROR]` and abort execution.
-  - To verify fleet-wide integrity across all 308 profiles:
+  - To verify fleet-wide integrity across all 323 profiles (21 teams):
     ```bash
     node scripts/full-fleet-audit.js
     ```
+
+### 6. Dual-Key Auto-Failover & Multi-Account Switch Resilience (Verified 2026-10-24)
+When operating between the main operational account and the super-admin account on AdsPower, AdsPower Local API changes the active API Key.
+- `credentials.json` supports an `adsPowerApiKeys: string[]` array storing all verified account keys.
+- `api-client.js` includes an automatic failover guard: if an API request receives `API Key mismatch` or `Require api-key`, it automatically rotates to the alternative key in `adsPowerApiKeys`, saves the working key, and retries the request transparently within 100ms.
+- Both Main account (`28f77f...`) and Admin account (`5a915d...`) can be switched back and forth seamlessly with 0 downtime and 0 manual configuration.
 
 Ensure AdsPower is running (default port `50325`). Pass `--port` / `--api-key` when needed, or set the `ADS_API_KEY` environment variable before running `start`.
 

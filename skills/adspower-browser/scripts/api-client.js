@@ -3,7 +3,8 @@ const {
     AUTOLAB_BACKGROUND_FLAGS,
     mergeLaunchArgs,
     requireCredential,
-    getLiveAdsPowerPort
+    getLiveAdsPowerPort,
+    rotateAdsPowerKey
 } = require('./admin-kit-core');
 
 let CACHED_PORT = null;
@@ -83,7 +84,7 @@ function testPort(port) {
  * Direct High-Speed HTTP Client for AdsPower Local API
  * Executes in milliseconds with dual authentication headers.
  */
-async function request(path, method = 'GET', body = null) {
+async function request(path, method = 'GET', body = null, retryCount = 0) {
     const activePort = await getActivePort();
     const adsPowerKey = getAdsPowerKey();
     return new Promise((resolve, reject) => {
@@ -104,9 +105,26 @@ async function request(path, method = 'GET', body = null) {
         }, res => {
             let data = '';
             res.on('data', chunk => data += chunk);
-            res.on('end', () => {
+            res.on('end', async () => {
                 try {
                     const parsed = JSON.parse(data);
+
+                    // Dual-Key Auto-Failover Guard (Multi-Account Switch)
+                    if (parsed.code === -1 && parsed.msg &&
+                        (parsed.msg.includes('API Key mismatch') || parsed.msg.includes('Require api-key')) &&
+                        retryCount < 2) {
+                        const nextKey = rotateAdsPowerKey(adsPowerKey);
+                        if (nextKey && nextKey !== adsPowerKey) {
+                            console.log(`\n🔄 [AdsPower Key Guard] Detected Account Switch (${parsed.msg}). Auto-failing over to alternative key...`);
+                            try {
+                                const retryRes = await request(path, method, body, retryCount + 1);
+                                return resolve(retryRes);
+                            } catch (retryErr) {
+                                return reject(retryErr);
+                            }
+                        }
+                    }
+
                     if (parsed.code === 0 || parsed.data) {
                         resolve(parsed.data || parsed);
                     } else {

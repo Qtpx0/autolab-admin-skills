@@ -17,10 +17,16 @@ function defaultCredentialsPath(env = process.env) {
 function loadCredentials({ credentialsPath = defaultCredentialsPath(), env = process.env } = {}) {
     let stored = {};
     if (fs.existsSync(credentialsPath)) {
-        stored = JSON.parse(fs.readFileSync(credentialsPath, 'utf8'));
+        try {
+            stored = JSON.parse(fs.readFileSync(credentialsPath, 'utf8'));
+        } catch (e) {}
     }
+    const primaryKey = env.ADS_API_KEY || stored.adsPowerApiKey || '';
+    const rawKeys = Array.isArray(stored.adsPowerApiKeys) ? stored.adsPowerApiKeys : [];
+    const allKeys = Array.from(new Set([primaryKey, ...rawKeys].filter(Boolean)));
     return {
-        adsPowerApiKey: env.ADS_API_KEY || stored.adsPowerApiKey || '',
+        adsPowerApiKey: primaryKey,
+        adsPowerApiKeys: allKeys,
         webshareApiToken: env.WEBSHARE_API_TOKEN || stored.webshareApiToken || ''
     };
 }
@@ -45,12 +51,33 @@ function extractLegacyCredentials({ adsSource = '', webshareSource = '' } = {}) 
 
 function saveCredentials(credentials, credentialsPath = defaultCredentialsPath()) {
     fs.mkdirSync(path.dirname(credentialsPath), { recursive: true });
+    let existing = {};
+    if (fs.existsSync(credentialsPath)) {
+        try {
+            existing = JSON.parse(fs.readFileSync(credentialsPath, 'utf8'));
+        } catch (e) {}
+    }
+    const primaryKey = credentials.adsPowerApiKey || existing.adsPowerApiKey || '';
+    const rawKeys = Array.isArray(credentials.adsPowerApiKeys) 
+        ? credentials.adsPowerApiKeys 
+        : (Array.isArray(existing.adsPowerApiKeys) ? existing.adsPowerApiKeys : []);
+    const allKeys = Array.from(new Set([primaryKey, ...rawKeys].filter(Boolean)));
     const payload = {
         migrationVersion: 1,
-        adsPowerApiKey: credentials.adsPowerApiKey || '',
-        webshareApiToken: credentials.webshareApiToken || ''
+        adsPowerApiKey: primaryKey,
+        adsPowerApiKeys: allKeys,
+        webshareApiToken: credentials.webshareApiToken || existing.webshareApiToken || ''
     };
     fs.writeFileSync(credentialsPath, `${JSON.stringify(payload, null, 2)}\n`, { mode: 0o600 });
+}
+
+function rotateAdsPowerKey(failedKey, credentialsPath = defaultCredentialsPath()) {
+    const creds = loadCredentials({ credentialsPath });
+    const keys = creds.adsPowerApiKeys;
+    if (keys.length <= 1) return null;
+    const nextKey = keys.find(k => k !== failedKey) || keys[0];
+    saveCredentials({ ...creds, adsPowerApiKey: nextKey }, credentialsPath);
+    return nextKey;
 }
 
 function mergeLaunchArgs(existing = []) {
@@ -180,6 +207,7 @@ module.exports = {
     requireCredential,
     extractLegacyCredentials,
     saveCredentials,
+    rotateAdsPowerKey,
     mergeLaunchArgs,
     hashContent,
     classifyManagedFile,

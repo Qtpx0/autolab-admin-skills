@@ -1,6 +1,6 @@
 {
   "package": "autolab-admin-skills",
-  "version": "1.8.3",
+  "version": "1.8.4",
   "skills": ["adspower-browser", "webshare-proxy"],
   "preserve": [
     "references/local-overrides.md",
@@ -20,6 +20,7 @@
     "2026-10-03-webshare-inplace-proxy-swap-and-adspower-sync.md",
     "2026-10-03-webshare-proxy-sync-v2-diff-hardening.md",
     "2026-10-14-adspower-chrome-154-wide-spectrum-ua-and-fast-resume.md",
-    "2026-10-24-adspower-strict-group-proxy-isolation-guard.md"
+    "2026-10-24-adspower-strict-group-proxy-isolation-guard.md",
+    "2026-10-24-adspower-dual-key-auto-failover-multi-account.md"
   ]
 }
