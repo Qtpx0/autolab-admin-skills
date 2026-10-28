@@ -159,6 +159,10 @@ const AUTOLAB_GOLDEN_FINGERPRINT = {
     media_devices: '1',
     client_rects: '1',
     speech_switch: '1',
+    browser_kernel_config: {
+        type: 'chrome',
+        version: '156'
+    },
     random_ua: {
         ua_system_version: ['Windows 10', 'Windows 11'],
         ua_version: ['156']
