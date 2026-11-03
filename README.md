@@ -1,6 +1,6 @@
 # 🚀 AutoLab Official Admin Skills Kit
 
-[![Version](https://img.shields.io/badge/version-1.8.1-blue.svg?style=flat-square)](manifest.json)
+[![Version](https://img.shields.io/badge/version-1.8.5-blue.svg?style=flat-square)](manifest.json)
 [![Scale](https://img.shields.io/badge/scale-20%20Seats%20%7C%20308%20Profiles%20%7C%20100%20Proxies-success.svg?style=flat-square)](#)
 [![Proxy](https://img.shields.io/badge/proxy-Webshare%20Static%20Residential-orange.svg?style=flat-square)](#)
 [![Anti--Detect](https://img.shields.io/badge/browser-AdsPower%20Local%20API-purple.svg?style=flat-square)](#)
@@ -109,6 +109,9 @@ node .agents/skills/adspower-browser/scripts/test-admin-skill-kit.js
 
 ## 📜 บันทึกการเปลี่ยนแปลง (Changelog Highlights)
 
+* **v1.8.5 (2026-11-03):**
+  * บังคับล็อก `ipchecker: "ipapi"` ใน `api-client.js`, `sync-proxies-in-place.js`, `swap-proxy-country.js` และ `resequence-reserve-proxies.js` ป้องกันบั๊กฐานข้อมูล `ip2location` มอง IP สิงคโปร์ `212.42.201.0/24` เป็นประเทศลิทัวเนีย (`LT`) จนทำให้เมนูเบราว์เซอร์เพี้ยนเป็นภาษาลิทัวเนีย
+  * เพิ่ม KI Patch: `2026-11-03-adspower-ipapi-checker-212-42-geoip-fix.md`
 * **v1.4.0 (2026-09-11):**
   * เพิ่ม `audit-proxy-pool.js`: ตรวจสุขภาพ Proxy 3 ชั้นสู่ Meta Firewall & Multi-DNSBL
   * เพิ่ม `provision-project.js`: เสกโปรไฟล์พนักงานยกชุด 15 จอ พร้อมเฉลี่ยพูล Round-Robin

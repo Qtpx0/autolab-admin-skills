@@ -118,6 +118,14 @@ When operating between the main operational account and the super-admin account 
 - `api-client.js` includes an automatic failover guard: if an API request receives `API Key mismatch` or `Require api-key`, it automatically rotates to the alternative key in `adsPowerApiKeys`, saves the working key, and retries the request transparently within 100ms.
 - Both Main account (`28f77f...`) and Admin account (`5a915d...`) can be switched back and forth seamlessly with 0 downtime and 0 manual configuration.
 
+### 7. Mandatory Proxy IP Checker Invariant (`ipchecker: "ipapi"` — Verified 2026-11-03)
+All 100 Webshare Singapore Static Residential Proxies in the `212.42.201.0/24` subnet (Level 3 Communications, AS10753, Singapore) MUST strictly use `ipchecker: "ipapi"` in AdsPower:
+- **Root Cause of `ip2location` Bug:** AdsPower's default IP query channel (`ip2location`) relies on a stale GeoIP database that misidentifies the `212.42.201.0/24` Singapore subnet as **Lithuania (`LT`, Vilnius)** due to legacy European ASN registration records.
+- **Impact of `ip2location` Mismatch:** Because AutoLab Golden Fingerprint enforces `language_switch: "1"` and `page_language_switch: "1"` (100% IP-based language), any proxy checked via `ip2location` resolves `ip_country: "lt"`, causing SunBrowser UI (`chrome://settings`, extensions popup `"Plėtiniai"`) and `Accept-Language` headers across all connected profiles to flip to **Lithuanian (`lt-LT`)** instead of English (`en-US`).
+- **Permanent Guardrail Enforcement (v1.8.5):**
+  1. `api.createProxies()` and `api.updateProxy()` in `scripts/api-client.js` automatically enforce `ipchecker: "ipapi"` (and automatically upgrade any `'ip2location'` value to `'ipapi'`).
+  2. Never configure or revert any `212.42.x` proxy to `ip2location`. Always verify that `ipchecker === "ipapi"` so AdsPower resolves **🇸🇬 SG (Singapore)** and keeps all browser UIs in **English (`en-US`)** across all employee machines.
+
 Ensure AdsPower is running (default port `50325`). Pass `--port` / `--api-key` when needed, or set the `ADS_API_KEY` environment variable before running `start`.
 
 The CLI itself supports launching the AdsPower application via API key. If the AdsPower client is installed, AdsPower headless mode can also be launched via API key.

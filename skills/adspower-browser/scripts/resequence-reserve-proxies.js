@@ -39,7 +39,7 @@ async function resequenceReserveProxies() {
             user: p.user,
             password: p.password,
             remark: `[ว่าง] คลังกลาง AutoLab #${numStr}`,
-            ipchecker: p.ipchecker || 'ip2location'
+            ipchecker: (p.ipchecker && p.ipchecker !== 'ip2location') ? p.ipchecker : 'ipapi'
         };
     });
 

@@ -212,7 +212,8 @@ async function adsUpdateRow(proxyId, host, port, user, password) {
         host,
         port: String(port),
         user,
-        password
+        password,
+        ipchecker: 'ipapi'
     });
     if (isAdsError(res)) throw new Error(`AdsPower rejected update for row ${proxyId}: ${res.msg || JSON.stringify(res)}`);
     return res;

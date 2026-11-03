@@ -133,13 +133,14 @@ async function swapCountry(profileQuery, targetCountry = 'US') {
 
     console.log(`[FastSwap] Newly allocated ${targetCountry} IP: ${newProxy.proxy_address}:${newProxy.port}`);
 
-    // Step 4: Update AdsPower Proxy in pool
+    // Step 4: Update AdsPower Proxy in pool (always enforce 'ipapi' checker)
     await adsClient.updateProxy({
         proxy_id: proxyId,
         host: newProxy.proxy_address,
         port: String(newProxy.port),
         user: newProxy.username,
-        password: newProxy.password
+        password: newProxy.password,
+        ipchecker: 'ipapi'
     });
 
     // Step 5: Update AdsPower Profile

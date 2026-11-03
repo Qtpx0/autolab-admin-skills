@@ -345,10 +345,20 @@ module.exports = {
         request('/api/v1/user/delete-cache-v2', 'POST', { profile_id: profile_ids, type: types }),
     newFingerprint: (profile_id) => request('/api/v1/user/new-fingerprint', 'POST', { profile_id }),
 
-    // 5. Proxy Pool Management
+    // 5. Proxy Pool Management (Enforces 'ipapi' checker to prevent IP2Location stale LT GeoIP mismatch on 212.42.x SG subnet)
     listProxies: (page = 1, limit = 100) => request('/api/v2/proxy-list/list', 'POST', { page, limit }),
-    createProxies: (proxies) => request('/api/v2/proxy-list/create', 'POST', proxies),
-    updateProxy: (data) => request('/api/v2/proxy-list/update', 'POST', data),
+    createProxies: (proxies) => {
+        const normalized = Array.isArray(proxies)
+            ? proxies.map(p => ({ ...p, ipchecker: (p && p.ipchecker && p.ipchecker !== 'ip2location') ? p.ipchecker : 'ipapi' }))
+            : proxies;
+        return request('/api/v2/proxy-list/create', 'POST', normalized);
+    },
+    updateProxy: (data) => {
+        const payload = (data && typeof data === 'object' && !Array.isArray(data))
+            ? { ...data, ipchecker: (data.ipchecker && data.ipchecker !== 'ip2location') ? data.ipchecker : 'ipapi' }
+            : data;
+        return request('/api/v2/proxy-list/update', 'POST', payload);
+    },
     deleteProxies: (proxy_ids) => request('/api/v2/proxy-list/delete', 'POST', { proxy_id: proxy_ids }),
 
     // 6. Group Management

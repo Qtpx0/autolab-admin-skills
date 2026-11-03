@@ -99,8 +99,8 @@ If any IP fails or exceeds score limits, trigger automated replacement via `swap
    ```
 3. Call AdsPower Local API `create-proxy` or `create-browser` / `update-browser` on Port `50325` (or active port).
    * **Schema warning:** the `proxy_host/proxy_port/...` shape above is for **profile** `user_proxy_config` only.
-     The **Proxy Pool** API `POST /api/v2/proxy-list/update` requires `{ proxy_id, type, host, port, user, password }`
-     (using `proxy_host` there returns `data error`).
+     The **Proxy Pool** API `POST /api/v2/proxy-list/update` requires `{ proxy_id, type, host, port, user, password, ipchecker: "ipapi" }`
+     (using `proxy_host` there returns `data error`, and omitting `ipchecker: "ipapi"` or using `ip2location` misidentifies the `212.42.201.0/24` Singapore subnet as Lithuania `LT`, flipping all browser UIs to Lithuanian).
 4. Whenever this workflow creates an AdsPower profile, follow the sibling
    `adspower-browser` AutoLab Official Profile Invariant and persist all three
    Chromium anti-background launch arguments before the profile is opened.
@@ -143,3 +143,4 @@ npm run test:proxy-sync
   5. **Read-back verification:** every changed row is re-read; mismatches are retried once at 1.5s pace; non-zero exit on failure.
   6. **Live-session guard limits:** uses `/api/v1/browser/local-active` and sees **this machine only**. Other staff machines are invisible — treat staff as live. The guard fails closed if it cannot read state.
   7. **Single swap identifies the new IP by set-difference** (before vs after), never by "newest created_at". If the AdsPower update fails after Webshare replaced the IP, `npm run proxy:sync-apply` heals that row only.
+  8. **Mandatory `ipchecker: "ipapi"` Enforcement (v1.8.5):** Every proxy creation and update (`sync-proxies-in-place.js`, `swap-proxy-country.js`, `api-client.js`) enforces `ipchecker: "ipapi"` to prevent `ip2location` from misidentifying `212.42.201.0/24` as Lithuania (`LT`) and corrupting browser UI languages to Lithuanian.
