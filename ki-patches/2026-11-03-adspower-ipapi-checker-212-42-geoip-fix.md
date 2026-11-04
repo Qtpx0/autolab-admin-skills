@@ -26,3 +26,4 @@ Following the full fleet migration of 100 Webshare Singapore Static Residential 
 2. **Code-Level Guardrails (`v1.8.5`):**
    - `api.createProxies()` and `api.updateProxy()` in `adspower-browser/scripts/api-client.js` now automatically enforce `ipchecker: "ipapi"` and auto-upgrade any `'ip2location'` input to `'ipapi'`.
    - `resequence-reserve-proxies.js`, `sync-proxies-in-place.js`, and `swap-proxy-country.js` explicitly pass `ipchecker: "ipapi"` on every proxy creation and in-place update.
+
